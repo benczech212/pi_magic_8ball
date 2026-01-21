@@ -1,0 +1,34 @@
+ui:
+  window_width: 1280
+  window_height: 720
+  fullscreen: false
+  fps: 60
+  debug: false
+
+gpio:
+  enabled: true
+  button_pin: 17
+  debounce_seconds: 0.15
+
+behavior:
+  animation_seconds: 2.2
+  idle_return_seconds: 20
+
+paths:
+  outcomes_csv: outcomes.csv
+  logs_dir: logs
+  interactions_csv: logs/interactions.csv
+
+text:
+  prompts:
+    - "MAGIC 7-BALL"
+    - "ASK THE VOID"
+    - "CONSULT THE CUBE OF DESTINY"
+  waiting_screen:
+    title: "MAGIC 7-BALL"
+    subtitle: "Press button"
+  thinking_screen:
+    title: "SHAKING THE 7-BALL..."
+    subtitle: "calibrating probability fields..."
+  result_screen:
+    footer: "Press button"
