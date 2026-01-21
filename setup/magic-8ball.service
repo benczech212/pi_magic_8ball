@@ -1,0 +1,27 @@
+[Unit]
+Description=Magic 8-Ball Interactive Display
+After=network.target graphical.target
+Wants=graphical.target
+
+[Service]
+Type=simple
+
+# Change if needed
+User=pi
+Group=pi
+
+WorkingDirectory=/home/pi/pi_magic_8ball
+
+ExecStart=/usr/bin/python3 -m src.main
+
+Restart=always
+RestartSec=3
+
+Environment=PYTHONUNBUFFERED=1
+Environment=SDL_VIDEODRIVER=x11
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target

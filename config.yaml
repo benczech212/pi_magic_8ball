@@ -1,18 +1,35 @@
+name: "7-BALL"
+
 ui:
   window_width: 1280
   window_height: 720
-  fullscreen: false
+  fullscreen: True
   fps: 60
   debug: false
+
+theme:
+  background: black
+  text: white
+  accent: red
 
 gpio:
   enabled: true
   button_pin: 17
   debounce_seconds: 0.15
 
+  lamp_enabled: true
+  lamp_pin: 18
+  lamp_active_high: true
+  lamp_pwm_hz: 200
+
 behavior:
-  animation_seconds: 2.2
+  animation_seconds: 5.0
   idle_return_seconds: 20
+  result_fade_seconds: 5
+  result_fadeout_seconds: 3.5
+  prompt_fade_seconds: 0.9
+  thinking_fade_seconds: 0.6
+  square_settle_seconds: 1.0
 
 paths:
   outcomes_csv: outcomes.csv
@@ -21,14 +38,45 @@ paths:
 
 text:
   prompts:
-    - "MAGIC 7-BALL"
+    - "TOUCH MY BIG BUTTON"
+    - "MAGIC {{name}}"
     - "ASK THE VOID"
     - "CONSULT THE CUBE OF DESTINY"
+    - "SHAKE THE {{name}}"
+    - "ROLL FOR DESTINY"
+    - "DIVINATION AS A SERVICE"
+    - "PROBABILITY SAYS HELLO"
+    - "THE ORACLE IS BUFFERING"
+    - "QUERY THE COSMIC CACHE"
+    - "ASK THE DUST"
+    - "TRUST THE VIBES"
+    - "IT DEPENDS (OBVIOUSLY)"
+    - "PRESS FOR WISDOM"
+    - "DEPLOY THE ANSWER"
+    - "SUMMON A HOT TAKE"
   waiting_screen:
-    title: "MAGIC 7-BALL"
-    subtitle: "Press button"
+    title: "MAGIC {{name}}"
+    subtitles:
+      - "Press button"
+      - "Press button. No refunds."
+      - "Press button. Only with consent."
+      - "Press button to consult the vibes."
+      - "Press button. Volunteers are sexy."
+      - "Press button. Don’t moop."
+      - "Press button. Radical self-reliance engaged."
+      - "Press button. The playa provides (sometimes)."
+
   thinking_screen:
-    title: "SHAKING THE 7-BALL..."
-    subtitle: "calibrating probability fields..."
+    title: "SHAKING THE {{name}}..."
+    subtitles:
+      - "calibrating probability fields..."
+      - "consulting the dust ledger..."
+      - "aligning with the event horizon..."
+      - "asking a sparkle pony for directions..."
+      - "invoking radical self-reliance..."
+      - "establishing consent protocols..."
+      - "checking the moop map..."
+      - "negotiating with the void..."
+
   result_screen:
     footer: "Press button"
