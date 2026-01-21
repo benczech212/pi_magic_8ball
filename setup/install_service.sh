@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 SERVICE_NAME="magic-8ball.service"
-SERVICE_SRC="$PROJECT_ROOT/$SERVICE_NAME"
+SERVICE_SRC="$PROJECT_ROOT/setup/$SERVICE_NAME"
 SERVICE_DST="/etc/systemd/system/$SERVICE_NAME"
 
 echo "🔮 Installing Magic 8-Ball systemd service"
