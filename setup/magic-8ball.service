@@ -7,10 +7,10 @@ Wants=graphical.target
 Type=simple
 
 # Change if needed
-User=pi
-Group=pi
+User=lunacrat
+Group=lunacrat
 
-WorkingDirectory=/home/pi/pi_magic_8ball
+WorkingDirectory=/opt/pi_magic_8ball
 
 ExecStart=/usr/bin/python3 -m src.main
 

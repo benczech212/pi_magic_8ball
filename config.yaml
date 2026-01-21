@@ -23,6 +23,7 @@ gpio:
   lamp_pwm_hz: 200
 
 behavior:
+  fades_enabled: true
   animation_seconds: 5.0
   idle_return_seconds: 20
   result_fade_seconds: 5
@@ -57,11 +58,13 @@ text:
   waiting_screen:
     title: "MAGIC {{name}}"
     subtitles:
-      - "Press button"
+      - "Press button for answers. No promises for good stuff."
       - "Press button. No refunds."
       - "Press button. Only with consent."
       - "Press button to consult the vibes."
-      - "Press button. Volunteers are sexy."
+      - "Press button for cosmic insights."
+      - "Press button. Results may vary."
+      - "Press button. Batteries ARE included."
       - "Press button. Don’t moop."
       - "Press button. Radical self-reliance engaged."
       - "Press button. The playa provides (sometimes)."
@@ -80,3 +83,152 @@ text:
 
   result_screen:
     footer: "Press button"
+
+
+outcomes:
+  - text: "Yes"
+    weight: 14
+  - text: "Most likely"
+    weight: 12
+  - text: "It is certain"
+    weight: 11
+  - text: "Unsanctioned"
+    weight: 6
+  - text: "Reply is hazy try again later"
+    weight: 10
+  - text: "Next year was better anyway"
+    weight: 7
+  - text: "Only with consent"
+    weight: 12
+  - text: "No refunds"
+    weight: 8
+  - text: "That sounds like moop"
+    weight: 9
+  - text: "Outlook is not good"
+    weight: 8
+  - text: "No"
+    weight: 12
+  - text: "Funk ya Burn"
+    weight: 5
+  - text: "Yo Momma"
+    weight: 4
+  - text: "Sounds like a sparkle pony"
+    weight: 6
+  - text: "Immediacy do it now"
+    weight: 7
+  - text: "Use Radical Self Reliance"
+    weight: 8
+  - text: "Volunteers are sexy"
+    weight: 6
+  - text: "Yes. Also hydrate."
+    weight: 14
+  - text: "Signs point to: maybe. Check the wind."
+    weight: 13
+  - text: "Ask again after a nap in the shade."
+    weight: 13
+  - text: "Consent says: ask clearly, then try again."
+    weight: 12
+  - text: "Trust the playa. Not the plan."
+    weight: 12
+  - text: "It’s a yes if you bring snacks."
+    weight: 12
+  - text: "The answer is in your cooler."
+    weight: 11
+  - text: "You already know. You’re stalling."
+    weight: 11
+  - text: "Do it, but label your cables first."
+    weight: 11
+  - text: "Proceed… with a headlamp."
+    weight: 11
+  - text: "Not today. The sun is judging you."
+    weight: 10
+  - text: "The universe says yes, your feet say no."
+    weight: 10
+  - text: "Your campmates will say “sure” and mean “no.”"
+    weight: 10
+  - text: "Flip a coin, then ignore it."
+    weight: 10
+  - text: "The porto-potties say: reconsider."
+    weight: 9
+  - text: "Only if you’re willing to carry it back."
+    weight: 9
+  - text: "Your future self will laugh. Do it anyway."
+    weight: 9
+  - text: "Yes, but bring earplugs."
+    weight: 9
+  - text: "Maybe. Consult the nearest art car."
+    weight: 9
+  - text: "If it sparkles, it’s probably fine."
+    weight: 9
+  - text: "Try again after you’ve eaten something real."
+    weight: 9
+  - text: "The dust says “lol.”"
+    weight: 8
+  - text: "The answer is: duct tape."
+    weight: 8
+  - text: "If you have to ask… it’s a yes."
+    weight: 8
+  - text: "Your vibe is correct; your timing is cursed."
+    weight: 8
+  - text: "It will work. Briefly."
+    weight: 8
+  - text: "Yes, but at 2:37am exactly."
+    weight: 7
+  - text: "You’ll forget. Set an alarm."
+    weight: 7
+  - text: "No. But it’ll make a great story."
+    weight: 7
+  - text: "The lampshade oracle says: dimmer."
+    weight: 7
+  - text: "Ask the person with the radio."
+    weight: 7
+  - text: "Probability favors the bold (and the sunscreened)."
+    weight: 7
+  - text: "Absolutely not. Unless it’s art."
+    weight: 6
+  - text: "The Temple says: be gentle."
+    weight: 6
+  - text: "The Playa provides… later."
+    weight: 6
+  - text: "Too many variables. Add more LEDs."
+    weight: 6
+  - text: "Not unless you secure it with two ratchet straps."
+    weight: 6
+  - text: "No. Please stop."
+    weight: 5
+  - text: "Hard no. Respectfully."
+    weight: 5
+  - text: "Your ex is somewhere nearby. Don’t."
+    weight: 5
+  - text: "The sound camp is about to drop. Wait."
+    weight: 5
+  - text: "No, because you didn’t test it at home."
+    weight: 5
+  - text: "Yes, but only if you share it."
+    weight: 4
+  - text: "Rare but possible. Like finding your friend on 2% battery."
+    weight: 4
+  - text: "It’s a yes, but you must tip the ice runner."
+    weight: 4
+  - text: "The oracle demands glitter tax."
+    weight: 3
+  - text: "Do it. Yell “SCIENCE!” first."
+    weight: 3
+  - text: "Touch my button some more please ;)"
+    weight: 3
+  - text: "This is the moment you become a legend."
+    weight: 2
+  - text: "The man in the tutu approves."
+    weight: 2
+  - text: "A stranger will hand you exactly what you need."
+    weight: 2
+  - text: "The Playa says yes. The city says no."
+    weight: 2
+  - text: "You are the chosen one (for this dumb job)."
+    weight: 1
+  - text: "Cosmic green light. Full send."
+    weight: 1
+  - text: "How should I know?"
+    weight: 1
+  - text: "Meow!"
+    weight: 20

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, Optional
 
 import yaml
 
@@ -48,10 +48,13 @@ class BehaviorConfig:
     thinking_fade_seconds: float = 0.6
     square_settle_seconds: float = 1.0
 
+    # NEW: global fade enable/disable
+    fades_enabled: bool = True
+
 
 @dataclass(frozen=True)
 class PathConfig:
-    outcomes_csv: Path
+    outcomes_csv: Optional[Path]
     logs_dir: Path
     interactions_csv: Path
 
@@ -59,7 +62,6 @@ class PathConfig:
 @dataclass(frozen=True)
 class WaitingScreenText:
     title: str = "MAGIC 7-BALL"
-    # Backward-compatible: if config has "subtitle", we load it into subtitles
     subtitles: List[str] = None  # type: ignore
 
 
@@ -83,6 +85,12 @@ class TextConfig:
 
 
 @dataclass(frozen=True)
+class OutcomeConfig:
+    text: str
+    weight: int = 1
+
+
+@dataclass(frozen=True)
 class AppConfig:
     project_root: Path
     name: str
@@ -92,6 +100,9 @@ class AppConfig:
     behavior: BehaviorConfig
     paths: PathConfig
     text: TextConfig
+
+    # NEW: outcomes can live in config.yaml
+    outcomes: List[OutcomeConfig]
 
 
 def _deep_get(d: Dict[str, Any], path: str, default=None):
@@ -178,6 +189,34 @@ def _as_str_list(value: Any, fallback: List[str]) -> List[str]:
     return fallback
 
 
+def _parse_outcomes(raw: Any) -> List[OutcomeConfig]:
+    """
+    Accepts:
+      outcomes:
+        - {text: "...", weight: 10}
+        - {text: "..."}  # weight defaults to 1
+    """
+    if not isinstance(raw, list):
+        return []
+
+    out: List[OutcomeConfig] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        text = str(item.get("text", "")).strip()
+        if not text:
+            continue
+        weight_raw = item.get("weight", 1)
+        try:
+            weight = int(weight_raw)
+        except Exception:
+            weight = 1
+        if weight < 1:
+            weight = 1
+        out.append(OutcomeConfig(text=text, weight=weight))
+    return out
+
+
 def load_config(config_path: Path | None = None) -> AppConfig:
     project_root = Path(__file__).resolve().parents[2]
     cfg_path = config_path or project_root / "config.yaml"
@@ -219,10 +258,15 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         prompt_fade_seconds=_deep_get(data, "behavior.prompt_fade_seconds", 0.9),
         thinking_fade_seconds=_deep_get(data, "behavior.thinking_fade_seconds", 0.6),
         square_settle_seconds=_deep_get(data, "behavior.square_settle_seconds", 1.0),
+        fades_enabled=bool(_deep_get(data, "behavior.fades_enabled", True)),
     )
 
+    # outcomes_csv is now OPTIONAL (fallback only)
+    outcomes_csv_val = _deep_get(data, "paths.outcomes_csv", None)
+    outcomes_csv = (project_root / outcomes_csv_val) if isinstance(outcomes_csv_val, str) and outcomes_csv_val else None
+
     paths = PathConfig(
-        outcomes_csv=project_root / _deep_get(data, "paths.outcomes_csv", "outcomes.csv"),
+        outcomes_csv=outcomes_csv,
         logs_dir=project_root / _deep_get(data, "paths.logs_dir", "logs"),
         interactions_csv=project_root / _deep_get(data, "paths.interactions_csv", "logs/interactions.csv"),
     )
@@ -230,7 +274,6 @@ def load_config(config_path: Path | None = None) -> AppConfig:
     prompts_raw = _deep_get(data, "text.prompts", ["MAGIC 7-BALL"])
     prompts = _as_str_list(prompts_raw, ["MAGIC 7-BALL"])
 
-    # Waiting subtitles: prefer "subtitles", fallback to "subtitle"
     waiting_subs_raw = _deep_get(data, "text.waiting_screen.subtitles", None)
     if waiting_subs_raw is None:
         waiting_subs_raw = _deep_get(data, "text.waiting_screen.subtitle", "Press button")
@@ -258,6 +301,8 @@ def load_config(config_path: Path | None = None) -> AppConfig:
 
     name = str(_deep_get(data, "name", "7-BALL"))
 
+    outcomes_cfg = _parse_outcomes(_deep_get(data, "outcomes", []))
+
     return AppConfig(
         project_root=project_root,
         name=name,
@@ -267,6 +312,7 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         behavior=behavior,
         paths=paths,
         text=text_cfg,
+        outcomes=outcomes_cfg,
     )
 
 

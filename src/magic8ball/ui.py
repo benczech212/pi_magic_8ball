@@ -179,14 +179,26 @@ def _draw_square(screen, center, size, now_t, bg, accent, angle: float, motion: 
     pygame.draw.polygon(screen, fill2, pts2, 0)
 
 
-def _apply_fade_overlay(screen, bg_color, alpha: int):
-    if alpha <= 0:
-        return
-    alpha = max(0, min(255, alpha))
-    overlay = pygame.Surface(screen.get_size(), pygame.SRCALPHA).convert_alpha()
-    overlay.fill((bg_color[0], bg_color[1], bg_color[2], alpha))
-    screen.blit(overlay, (0, 0))
+class FadeOverlay:
+    """Reusable overlay surface to avoid per-frame allocations (important on Pi)."""
 
+    def __init__(self):
+        self._surf = None
+        self._size = None
+
+    def apply(self, screen: pygame.Surface, color: Tuple[int, int, int], alpha: int) -> None:
+        if alpha <= 0:
+            return
+        alpha = max(0, min(255, int(alpha)))
+
+        size = screen.get_size()
+        if self._surf is None or self._size != size:
+            self._surf = pygame.Surface(size).convert()
+            self._size = size
+
+        self._surf.fill(color)
+        self._surf.set_alpha(alpha)
+        screen.blit(self._surf, (0, 0))
 
 def _compute_square_pose(now: float, model: AppModel) -> Tuple[float, float]:
     """
@@ -268,6 +280,8 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
     cached_outcome_text = None
     cached_overlay = None
     cached_overlay_pos = (0, 0)
+    fade_overlay = FadeOverlay()
+    fades_enabled = bool(CONFIG.behavior.fades_enabled)
 
     def note_activity():
         model.last_activity_at = time.monotonic()
@@ -381,23 +395,35 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
                     cached_overlay = None
 
             elif model.state == AppState.FADEOUT:
-                fadeout_s = max(0.0, float(CONFIG.behavior.result_fadeout_seconds))
-                if (now - model.fadeout_started_at) >= fadeout_s:
+                if not fades_enabled:
                     model.outcome_text = ""
                     cached_outcome_text = None
                     cached_overlay = None
                     start_prompt_fadein()
+                else:
+                    fadeout_s = max(0.0, float(CONFIG.behavior.result_fadeout_seconds))
+                    if (now - model.fadeout_started_at) >= fadeout_s:
+                        model.outcome_text = ""
+                        cached_outcome_text = None
+                        cached_overlay = None
+                        start_prompt_fadein()
 
             # Fade-in completion
             if model.state == AppState.FADEIN_PROMPT:
-                dur = max(0.0, float(CONFIG.behavior.prompt_fade_seconds))
-                if dur <= 0.001 or (now - model.fadein_started_at) >= dur:
+                if not fades_enabled:
                     model.state = AppState.PROMPT
+                else:
+                    dur = max(0.0, float(CONFIG.behavior.prompt_fade_seconds))
+                    if dur <= 0.001 or (now - model.fadein_started_at) >= dur:
+                        model.state = AppState.PROMPT
 
             elif model.state == AppState.FADEIN_THINKING:
-                dur = max(0.0, float(CONFIG.behavior.thinking_fade_seconds))
-                if dur <= 0.001 or (now - model.fadein_started_at) >= dur:
+                if not fades_enabled:
                     model.state = AppState.THINKING
+                else:
+                    dur = max(0.0, float(CONFIG.behavior.thinking_fade_seconds))
+                    if dur <= 0.001 or (now - model.fadein_started_at) >= dur:
+                        model.state = AppState.THINKING
 
             # Lamp mode
             if model.state in (AppState.PROMPT, AppState.FADEIN_PROMPT):
@@ -435,7 +461,8 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
                     u = (now - model.fadein_started_at) / dur
                     u = _ease_out_cubic(u)
                     alpha = int(255 * (1.0 - max(0.0, min(1.0, u))))
-                    _apply_fade_overlay(screen, bg, alpha)
+                    if fades_enabled:
+                        fade_overlay.apply(screen, bg, alpha)
 
             elif model.state in (AppState.THINKING, AppState.FADEIN_THINKING):
                 title = _render_template(CONFIG.text.thinking_screen.title)
@@ -448,7 +475,8 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
                     u = (now - model.fadein_started_at) / dur
                     u = _ease_out_cubic(u)
                     alpha = int(255 * (1.0 - max(0.0, min(1.0, u))))
-                    _apply_fade_overlay(screen, bg, alpha)
+                    if fades_enabled:
+                        fade_overlay.apply(screen, bg, alpha)
 
             elif model.state in (AppState.RESULT, AppState.FADEOUT):
                 if cached_outcome_text != model.outcome_text or cached_overlay is None:
@@ -459,22 +487,25 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
                     )
                     cached_outcome_text = model.outcome_text
 
-                if model.state == AppState.RESULT:
-                    fade_in_s = max(0.0, float(CONFIG.behavior.result_fade_seconds))
-                    if fade_in_s <= 0.001:
-                        alpha = 255
-                    else:
-                        u = (now - model.result_started_at) / fade_in_s
-                        u = _ease_out_cubic(u)
-                        alpha = int(255 * max(0.0, min(1.0, u)))
+                if not fades_enabled:
+                    alpha = 255 if model.state == AppState.RESULT else 0
                 else:
-                    fade_out_s = max(0.0, float(CONFIG.behavior.result_fadeout_seconds))
-                    if fade_out_s <= 0.001:
-                        alpha = 0
+                    if model.state == AppState.RESULT:
+                        fade_in_s = max(0.0, float(CONFIG.behavior.result_fade_seconds))
+                        if fade_in_s <= 0.001:
+                            alpha = 255
+                        else:
+                            u = (now - model.result_started_at) / fade_in_s
+                            u = _ease_out_cubic(u)
+                            alpha = int(255 * max(0.0, min(1.0, u)))
                     else:
-                        u = (now - model.fadeout_started_at) / fade_out_s
-                        u = _ease_in_cubic(u)
-                        alpha = int(255 * (1.0 - max(0.0, min(1.0, u))))
+                        fade_out_s = max(0.0, float(CONFIG.behavior.result_fadeout_seconds))
+                        if fade_out_s <= 0.001:
+                            alpha = 0
+                        else:
+                            u = (now - model.fadeout_started_at) / fade_out_s
+                            u = _ease_in_cubic(u)
+                            alpha = int(255 * (1.0 - max(0.0, min(1.0, u))))
 
                 cached_overlay.set_alpha(alpha)
                 screen.blit(cached_overlay, cached_overlay_pos)
