@@ -29,6 +29,7 @@ class AppState(Enum):
 class AppModel:
     state: AppState = AppState.FADEIN_PROMPT
     outcome_text: str = ""
+    last_outcome_text: str = ""
     waiting_subtitle: str = ""
     thinking_subtitle: str = ""
     thinking_started_at: float = 0.0
@@ -75,6 +76,39 @@ def _pick_subtitle(options: list[str]) -> str:
 def _draw_centered_text(screen, font, text, y, color):
     surf = font.render(text, True, color)
     rect = surf.get_rect(center=(screen.get_width() // 2, y))
+    screen.blit(surf, rect)
+def _draw_centered_text_autofit(
+    screen: pygame.Surface,
+    text: str,
+    y: int,
+    color: Tuple[int, int, int],
+    max_width_ratio: float = 0.92,
+    max_font_size: int = 64,
+    min_font_size: int = 18,
+    bold: bool = False,
+):
+    """
+    Renders centered text that will shrink to fit the screen width.
+    Useful for subtitles/prompts that could be long.
+    """
+    if not text:
+        return
+
+    screen_w = screen.get_width()
+    max_w = int(screen_w * max_width_ratio)
+
+    size = max_font_size
+    chosen_font = pygame.font.SysFont(None, size, bold=bold)
+
+    while size > min_font_size:
+        f = pygame.font.SysFont(None, size, bold=bold)
+        if f.size(text)[0] <= max_w:
+            chosen_font = f
+            break
+        size -= 2
+
+    surf = chosen_font.render(text, True, color)
+    rect = surf.get_rect(center=(screen_w // 2, y))
     screen.blit(surf, rect)
 
 
@@ -383,7 +417,14 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
                     capture_settle(now)
 
                     outcome = choose_outcome(outcomes)
+                    if model.last_outcome_text:
+                        tries = 0
+                        while outcome.text == model.last_outcome_text and tries < 8:
+                            outcome = choose_outcome(outcomes)
+                            tries += 1
+
                     model.outcome_text = outcome.text
+                    model.last_outcome_text = model.outcome_text
                     model.shown_count += 1
                     append_interaction(CONFIG.paths.interactions_csv, model.shown_count, model.outcome_text)
 
@@ -454,7 +495,16 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
 
                 _draw_centered_text(screen, font_big, title, 90, color=text)
                 _draw_centered_text(screen, font_med, prompt_line, 155, color=_blend(text, accent, 0.25))
-                _draw_centered_text(screen, font_big, subtitle, screen.get_height() - 140, color=text)
+                _draw_centered_text_autofit(
+                    screen,
+                    subtitle,
+                    screen.get_height() - 140,
+                    color=text,
+                    max_width_ratio=0.92,
+                    max_font_size=78,   # matches your font_big vibe
+                    min_font_size=26,
+                    bold=False,
+                )
 
                 if model.state == AppState.FADEIN_PROMPT:
                     dur = max(0.001, float(CONFIG.behavior.prompt_fade_seconds))
@@ -468,7 +518,16 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
                 title = _render_template(CONFIG.text.thinking_screen.title)
                 subtitle = model.thinking_subtitle or _render_template("...")
                 _draw_centered_text(screen, font_big, title, 90, color=text)
-                _draw_centered_text(screen, font_med, subtitle, screen.get_height() - 140, color=muted)
+                _draw_centered_text_autofit(
+                    screen,
+                    subtitle,
+                    screen.get_height() - 140,
+                    color=muted,
+                    max_width_ratio=0.92,
+                    max_font_size=44,   # matches your font_med vibe
+                    min_font_size=22,
+                    bold=False,
+                )
 
                 if model.state == AppState.FADEIN_THINKING:
                     dur = max(0.001, float(CONFIG.behavior.thinking_fade_seconds))

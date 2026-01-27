@@ -14,11 +14,11 @@ theme:
 
 gpio:
   enabled: true
-  button_pin: 17
+  button_pin: 17 #Green wire
   debounce_seconds: 0.15
 
   lamp_enabled: true
-  lamp_pin: 18
+  lamp_pin: 18 #Yellow wire
   lamp_active_high: true
   lamp_pwm_hz: 200
 
@@ -210,8 +210,6 @@ outcomes:
     weight: 4
   - text: "It’s a yes, but you must tip the ice runner."
     weight: 4
-  - text: "The oracle demands glitter tax."
-    weight: 3
   - text: "Do it. Yell “SCIENCE!” first."
     weight: 3
   - text: "Touch my button some more please ;)"
