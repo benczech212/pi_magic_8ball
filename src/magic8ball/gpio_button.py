@@ -49,4 +49,11 @@ class ArcadeButton:
             if (now - self._last_press_time) >= self.debounce_seconds:
                 self._last_press_time = now
                 return True
+                self._last_press_time = now
+                return True
         return False
+
+    def close(self):
+        if self._hw_button is not None:
+            self._hw_button.close()
+            self._hw_button = None

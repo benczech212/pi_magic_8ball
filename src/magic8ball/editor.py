@@ -56,11 +56,22 @@ class ConfigEditor:
         btn_save = ttk.Button(frame_footer, text="Save Settings", command=self.save)
         btn_save.pack(side="right")
         
-        btn_cancel = ttk.Button(frame_footer, text="Cancel", command=root.destroy)
-        btn_cancel.pack(side="right", padx=10)
+        btn_launch = ttk.Button(frame_footer, text="Launch", command=lambda: self.launch([]))
+        btn_launch.pack(side="right", padx=10)
+
+        btn_close = ttk.Button(frame_footer, text="Close", command=root.destroy)
+        btn_close.pack(side="right")
 
         # Start hardware loop
         self._update_hardware_loop()
+
+    def launch(self, args=[]):
+        cmd = [sys.executable, "-m", "src.main"] + args
+        print(f"Launching: {' '.join(cmd)}")
+        try:
+            subprocess.Popen(cmd, cwd=self.config.project_root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to launch: {e}")
 
     def __del__(self):
         if hasattr(self, 'lamp'):
@@ -265,6 +276,16 @@ class ConfigEditor:
         self.var_pull = tk.StringVar(value="Pull Up" if self.config.gpio.button_pull_up else "Pull Down")
         cb_pull = ttk.Combobox(f_pull, textvariable=self.var_pull, values=["Pull Up", "Pull Down"], state="readonly", width=12)
         cb_pull.pack(side="left", padx=10)
+        
+        def revert_pull():
+            val = "Pull Up" if self.config.gpio.button_pull_up else "Pull Down"
+            self.var_pull.set(val)
+            # setting var triggers the bind if we use <<VirtualEvent>>? 
+            # ComboboxSelected only fires on user interaction usually. 
+            # We should manually call update if we set programmatically, OR just let update_hardware_params handle it if we call it.
+            update_hardware_params()
+
+        ttk.Button(f_pull, text="Revert", command=revert_pull, width=6).pack(side="left", padx=5)
         ttk.Label(f_pull, text="(Try switching if button triggers randomly)").pack(side="left", padx=5)
 
         # Debounce
@@ -273,6 +294,12 @@ class ConfigEditor:
         ttk.Label(f_deb, text="Debounce (sec):").pack(side="left")
         self.var_debounce = tk.StringVar(value=str(self.config.gpio.debounce_seconds))
         ttk.Entry(f_deb, textvariable=self.var_debounce, width=8).pack(side="left", padx=10)
+        
+        def revert_debounce():
+            self.var_debounce.set(str(self.config.gpio.debounce_seconds))
+            # trace will trigger update
+
+        ttk.Button(f_deb, text="Revert", command=revert_debounce, width=6).pack(side="left", padx=5)
         ttk.Label(f_deb, text="(Increase to 0.3+ if noisy)").pack(side="left", padx=5)
 
         # Lamp PWM
@@ -289,20 +316,34 @@ class ConfigEditor:
                 # Re-init button with new settings
                 is_pull_up = (self.var_pull.get() == "Pull Up")
                 new_db = float(self.var_debounce.get())
+                
+                # Check if changed to avoid unnecessary re-init if only PWM changed
+                # Actually simpler to just re-init safely.
                 if hasattr(self, 'button'):
-                    # We can't easily destroy/recreate safely in loop, 
-                    # but we can try just replacing object if thread-safe enough for this simple app
+                    # Safe cleanup
+                    self.button.close()
+                    
+                    # Re-create
                     self.button = ArcadeButton(
                         self.config.gpio.button_pin, 
                         debounce_seconds=new_db,
                         pull_up=is_pull_up
                     )
-                # Re-init lamp? (if needed)
+                
+                # Update Lamp PWM instantly
+                new_pwm = int(self.var_pwm.get())
+                if hasattr(self, 'lamp') and self.lamp._led is not None:
+                     self.lamp._led.frequency = new_pwm
+
             except ValueError:
                 pass
         
         cb_pull.bind("<<ComboboxSelected>>", update_hardware_params)
         cb_pull.bind("<<ComboboxSelected>>", update_hardware_params, add="+")
+        
+        # Bind Debounce and PWM to update on write
+        self.var_debounce.trace_add("write", lambda *args: update_hardware_params())
+        self.var_pwm.trace_add("write", lambda *args: update_hardware_params())
 
     def _build_launch_tab(self):
         tab = ttk.Frame(self.notebook)
@@ -314,24 +355,14 @@ class ConfigEditor:
         ttk.Label(frame, text="Test the Application", font=("Arial", 16, "bold")).pack(pady=(0, 20))
         ttk.Label(frame, text="Launch the Magic 8-Ball in different modes to test your configuration.").pack(pady=(0, 20))
 
-        def launch(args=[]):
-            # Save first? Maybe safer not to auto-save to allow testing without committing?
-            # Let's just launch.
-            cmd = [sys.executable, "-m", "src.main"] + args
-            print(f"Launching: {' '.join(cmd)}")
-            try:
-                subprocess.Popen(cmd, cwd=self.config.project_root)
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to launch: {e}")
-
         # Buttons
         f_btns = ttk.Frame(frame)
         f_btns.pack(fill="x", pady=5)
 
-        ttk.Button(f_btns, text="Normal Launch", command=lambda: launch([])).pack(fill="x", pady=5)
-        ttk.Button(f_btns, text="Debug Mode (Overlays + Logs)", command=lambda: launch(["--debug"])).pack(fill="x", pady=5)
-        ttk.Button(f_btns, text="Windowed Mode", command=lambda: launch(["--windowed"])).pack(fill="x", pady=5)
-        ttk.Button(f_btns, text="No GPIO (Keyboard Only)", command=lambda: launch(["--no-gpio", "--debug"])).pack(fill="x", pady=5)
+        ttk.Button(f_btns, text="Normal Launch", command=lambda: self.launch([])).pack(fill="x", pady=5)
+        ttk.Button(f_btns, text="Debug Mode (Overlays + Logs)", command=lambda: self.launch(["--debug"])).pack(fill="x", pady=5)
+        ttk.Button(f_btns, text="Windowed Mode", command=lambda: self.launch(["--windowed"])).pack(fill="x", pady=5)
+        ttk.Button(f_btns, text="No GPIO (Keyboard Only)", command=lambda: self.launch(["--no-gpio", "--debug"])).pack(fill="x", pady=5)
 
 
 
