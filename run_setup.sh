@@ -1,0 +1,1 @@
+sudo ./setup/pre_install_prep.sh
