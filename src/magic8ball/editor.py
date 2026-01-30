@@ -1,4 +1,6 @@
 import time
+import sys
+import subprocess
 import tkinter as tk
 from tkinter import ttk, colorchooser, messagebox
 from .config import (
@@ -34,6 +36,7 @@ class ConfigEditor:
         self._build_text_tab()
         self._build_outcomes_tab()
         self._build_hardware_tab()
+        self._build_launch_tab()
 
         # Initialize Hardware
         self.lamp = ButtonLamp(
@@ -299,12 +302,37 @@ class ConfigEditor:
                 pass
         
         cb_pull.bind("<<ComboboxSelected>>", update_hardware_params)
-        # Entry widgets might need specific 'Save' to apply generally, but let's leave it for now
-        # Ideally we only apply on 'Save Settings', but live update for testing is nice.
-        # Let's add a strict "Apply Test Settings" button if we want live update, 
-        # but for now rely on Save -> Restart loop for full confidence, 
-        # OR just update button object here for strictly the TEST tab correctness.
         cb_pull.bind("<<ComboboxSelected>>", update_hardware_params, add="+")
+
+    def _build_launch_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Launch")
+        
+        frame = ttk.Frame(tab, padding="20")
+        frame.pack(fill="both", expand=True)
+        
+        ttk.Label(frame, text="Test the Application", font=("Arial", 16, "bold")).pack(pady=(0, 20))
+        ttk.Label(frame, text="Launch the Magic 8-Ball in different modes to test your configuration.").pack(pady=(0, 20))
+
+        def launch(args=[]):
+            # Save first? Maybe safer not to auto-save to allow testing without committing?
+            # Let's just launch.
+            cmd = [sys.executable, "-m", "src.main"] + args
+            print(f"Launching: {' '.join(cmd)}")
+            try:
+                subprocess.Popen(cmd, cwd=self.config.project_root)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to launch: {e}")
+
+        # Buttons
+        f_btns = ttk.Frame(frame)
+        f_btns.pack(fill="x", pady=5)
+
+        ttk.Button(f_btns, text="Normal Launch", command=lambda: launch([])).pack(fill="x", pady=5)
+        ttk.Button(f_btns, text="Debug Mode (Overlays + Logs)", command=lambda: launch(["--debug"])).pack(fill="x", pady=5)
+        ttk.Button(f_btns, text="Windowed Mode", command=lambda: launch(["--windowed"])).pack(fill="x", pady=5)
+        ttk.Button(f_btns, text="No GPIO (Keyboard Only)", command=lambda: launch(["--no-gpio", "--debug"])).pack(fill="x", pady=5)
+
 
 
     def save(self):

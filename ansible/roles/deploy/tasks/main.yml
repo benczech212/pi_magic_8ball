@@ -38,6 +38,14 @@
     group: lunacrat
     mode: '0755'
 
+- name: Create Config Shortcut
+  template:
+    src: config.desktop.j2
+    dest: /home/lunacrat/Desktop/Magic 8 Ball Config.desktop
+    owner: lunacrat
+    group: lunacrat
+    mode: '0755'
+
 - name: Ensure Autostart Directory Exists
   file:
     path: /home/lunacrat/.config/autostart
