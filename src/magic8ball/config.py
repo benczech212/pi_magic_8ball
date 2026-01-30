@@ -317,3 +317,72 @@ def load_config(config_path: Path | None = None) -> AppConfig:
 
 
 CONFIG = load_config()
+
+def save_config(config: AppConfig, path: Optional[Path] = None):
+    p = path or config.project_root / "config.yaml"
+    
+    # helper to format color
+    def fmt_col(c): 
+        if isinstance(c, tuple) or isinstance(c, list):
+            return f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}"
+        return c
+
+    data = {
+        "name": config.name,
+        "ui": {
+            "window_width": config.ui.window_width,
+            "window_height": config.ui.window_height,
+            "fullscreen": config.ui.fullscreen,
+            "fps": config.ui.fps,
+            "debug": config.ui.debug,
+        },
+        "theme": {
+            "background": fmt_col(config.theme.background),
+            "text": fmt_col(config.theme.text),
+            "accent": fmt_col(config.theme.accent),
+        },
+        "gpio": {
+            "enabled": config.gpio.enabled,
+            "button_pin": config.gpio.button_pin,
+            "debounce_seconds": config.gpio.debounce_seconds,
+            "lamp_enabled": config.gpio.lamp_enabled,
+            "lamp_pin": config.gpio.lamp_pin,
+            "lamp_active_high": config.gpio.lamp_active_high,
+            "lamp_pwm_hz": config.gpio.lamp_pwm_hz,
+        },
+        "behavior": {
+             "fades_enabled": config.behavior.fades_enabled,
+             "animation_seconds": config.behavior.animation_seconds,
+             "idle_return_seconds": config.behavior.idle_return_seconds,
+             "result_fade_seconds": config.behavior.result_fade_seconds,
+             "result_fadeout_seconds": config.behavior.result_fadeout_seconds,
+             "prompt_fade_seconds": config.behavior.prompt_fade_seconds,
+             "thinking_fade_seconds": config.behavior.thinking_fade_seconds,
+             "square_settle_seconds": config.behavior.square_settle_seconds,
+        },
+        "paths": {
+            "outcomes_csv": str(config.paths.outcomes_csv.name) if config.paths.outcomes_csv else None,
+            "logs_dir": str(config.paths.logs_dir.name),
+            "interactions_csv": str(config.paths.interactions_csv).replace(str(config.project_root) + "/", ""), # simplistic relative path
+        },
+        "text": {
+            "prompts": config.text.prompts,
+            "waiting_screen": {
+                "title": config.text.waiting_screen.title,
+                "subtitles": config.text.waiting_screen.subtitles,
+            },
+            "thinking_screen": {
+                "title": config.text.thinking_screen.title,
+                "subtitles": config.text.thinking_screen.subtitles,
+            },
+            "result_screen": {
+                "footer": config.text.result_screen.footer,
+            }
+        },
+        "outcomes": [
+            {"text": o.text, "weight": o.weight} for o in config.outcomes
+        ]
+    }
+    
+    with p.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(data, f, sort_keys=False, default_flow_style=False, allow_unicode=True)
