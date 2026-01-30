@@ -89,6 +89,7 @@ class TextConfig:
 class OutcomeConfig:
     text: str
     weight: int = 1
+    type: str = "Inconclusive"
 
 
 @dataclass(frozen=True)
@@ -214,7 +215,9 @@ def _parse_outcomes(raw: Any) -> List[OutcomeConfig]:
             weight = 1
         if weight < 1:
             weight = 1
-        out.append(OutcomeConfig(text=text, weight=weight))
+        
+        outcome_type = str(item.get("type", "Inconclusive")).strip()
+        out.append(OutcomeConfig(text=text, weight=weight, type=outcome_type))
     return out
 
 
@@ -273,7 +276,7 @@ def load_config(config_path: Path | None = None) -> AppConfig:
     )
 
     prompts_raw = _deep_get(data, "text.prompts", ["MAGIC 7-BALL"])
-    prompts = _as_str_list(prompts_raw, ["MAGIC 7-BALL"])
+    prompts = _as_str_list(prompts_raw, ["Ask a question,\nthen push the button"])
 
     waiting_subs_raw = _deep_get(data, "text.waiting_screen.subtitles", None)
     if waiting_subs_raw is None:
@@ -381,7 +384,7 @@ def save_config(config: AppConfig, path: Optional[Path] = None):
             }
         },
         "outcomes": [
-            {"text": o.text, "weight": o.weight} for o in config.outcomes
+            {"text": o.text, "weight": o.weight, "type": o.type} for o in config.outcomes
         ]
     }
     

@@ -2,6 +2,8 @@ import time
 import sys
 import subprocess
 import tkinter as tk
+import csv
+from pathlib import Path
 from tkinter import ttk, colorchooser, messagebox
 from .config import (
     CONFIG, save_config, AppConfig, ThemeConfig, UIConfig, BehaviorConfig, 
@@ -13,7 +15,7 @@ from .lamp import ButtonLamp, LampConfig, LampMode
 class ConfigEditor:
     def __init__(self, root):
         self.root = root
-        self.root.title("Magic 7-Ball Configuration")
+        self.root.title("Magic 8-Ball Configuration")
         self.root.geometry("800x600")
 
         self.config = CONFIG  # This is the loaded config object. We will mutate a copy or just read from it and build a new one on save.
@@ -36,6 +38,7 @@ class ConfigEditor:
         self._build_text_tab()
         self._build_outcomes_tab()
         self._build_hardware_tab()
+        self._build_logs_tab()
         self._build_launch_tab()
 
         # Initialize Hardware
@@ -134,25 +137,35 @@ class ConfigEditor:
         form_frame = ttk.Frame(tab, padding="20")
         form_frame.pack(fill="both", expand=True)
         
-        def pick_color(var):
+        
+        def pick_color(var, preview_canvas):
             color = colorchooser.askcolor(color=var.get())[1]
             if color:
                 var.set(color)
+                preview_canvas.config(bg=color)
 
-        # Background
-        ttk.Label(form_frame, text="Background Color:").grid(row=0, column=0, sticky="w", pady=5)
-        ttk.Entry(form_frame, textvariable=self.var_bg_color, width=10).grid(row=0, column=1, sticky="w", pady=5)
-        ttk.Button(form_frame, text="Pick", command=lambda: pick_color(self.var_bg_color)).grid(row=0, column=2, padx=5)
-        
-        # Text
-        ttk.Label(form_frame, text="Text Color:").grid(row=1, column=0, sticky="w", pady=5)
-        ttk.Entry(form_frame, textvariable=self.var_text_color, width=10).grid(row=1, column=1, sticky="w", pady=5)
-        ttk.Button(form_frame, text="Pick", command=lambda: pick_color(self.var_text_color)).grid(row=1, column=2, padx=5)
-        
-        # Accent
-        ttk.Label(form_frame, text="Accent Color:").grid(row=2, column=0, sticky="w", pady=5)
-        ttk.Entry(form_frame, textvariable=self.var_accent_color, width=10).grid(row=2, column=1, sticky="w", pady=5)
-        ttk.Button(form_frame, text="Pick", command=lambda: pick_color(self.var_accent_color)).grid(row=2, column=2, padx=5)
+        def make_row(row, label, var):
+             ttk.Label(form_frame, text=label).grid(row=row, column=0, sticky="w", pady=5)
+             ttk.Entry(form_frame, textvariable=var, width=10).grid(row=row, column=1, sticky="w", pady=5)
+             
+             # Preview square
+             preview = tk.Canvas(form_frame, width=20, height=20, bg=var.get(), highlightthickness=1, highlightbackground="gray")
+             preview.grid(row=row, column=2, padx=5)
+             
+             # Update preview if text entry changes
+             def update_preview(*args):
+                 try: 
+                      # Basic hex len check or rely on canvas ignoring bad colors
+                      if len(var.get()) in (4, 7, 13): # #123, #123456...
+                          preview.config(bg=var.get())
+                 except: pass
+             var.trace_add("write", update_preview)
+
+             ttk.Button(form_frame, text="Pick", command=lambda: pick_color(var, preview)).grid(row=row, column=3, padx=5)
+
+        make_row(0, "Background Color:", self.var_bg_color)
+        make_row(1, "Text Color:", self.var_text_color)
+        make_row(2, "Accent Color:", self.var_accent_color)
 
     def _build_text_tab(self):
         tab = ttk.Frame(self.notebook)
@@ -182,12 +195,15 @@ class ConfigEditor:
         frame_list = ttk.Frame(paned)
         paned.add(frame_list, weight=1)
         
-        columns = ("text", "weight")
+        columns = ("text", "weight", "type")
         self.tree = ttk.Treeview(frame_list, columns=columns, show="headings")
         self.tree.heading("text", text="Outcome Text")
         self.tree.heading("weight", text="Weight")
+        self.tree.heading("type", text="Type")
+        
         self.tree.column("text", width=300)
         self.tree.column("weight", width=50)
+        self.tree.column("type", width=100)
         
         scroll = ttk.Scrollbar(frame_list, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scroll.set)
@@ -197,7 +213,7 @@ class ConfigEditor:
         
         # Populate
         for outcome in self.config.outcomes:
-            self.tree.insert("", "end", values=(outcome.text, outcome.weight))
+            self.tree.insert("", "end", values=(outcome.text, outcome.weight, outcome.type))
             
         # Controls
         frame_controls = ttk.Frame(paned, padding=10)
@@ -211,12 +227,18 @@ class ConfigEditor:
         self.entry_outcome_weight = ttk.Entry(frame_controls, width=10)
         self.entry_outcome_weight.insert(0, "1")
         self.entry_outcome_weight.pack(anchor="w", pady=5)
+
+        ttk.Label(frame_controls, text="Type:").pack(anchor="w")
+        self.var_outcome_type = tk.StringVar(value="Inconclusive")
+        self.cb_outcome_type = ttk.Combobox(frame_controls, textvariable=self.var_outcome_type, values=["Yes", "No", "Inconclusive"], state="readonly")
+        self.cb_outcome_type.pack(anchor="w", pady=5)
         
         def add_item():
             txt = self.entry_outcome_text.get().strip()
             w = self.entry_outcome_weight.get().strip()
+            typ = self.var_outcome_type.get()
             if txt:
-                self.tree.insert("", "end", values=(txt, w))
+                self.tree.insert("", "end", values=(txt, w, typ))
                 self.entry_outcome_text.delete(0, "end")
                 
         def delete_item():
@@ -345,6 +367,72 @@ class ConfigEditor:
         self.var_debounce.trace_add("write", lambda *args: update_hardware_params())
         self.var_pwm.trace_add("write", lambda *args: update_hardware_params())
 
+    def _build_logs_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Logs")
+
+        # Two sub-tabs for Crash Log and Interaction Log
+        sub_nb = ttk.Notebook(tab)
+        sub_nb.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Crash Log
+        f_crash = ttk.Frame(sub_nb)
+        sub_nb.add(f_crash, text="Crash Log")
+        txt_crash = tk.Text(f_crash, wrap="word")
+        txt_crash.pack(fill="both", expand=True)
+        
+        # Load crash log content
+        crash_path = self.config.project_root / "logs/crash.log"
+        if crash_path.exists():
+            try:
+                txt_crash.insert("1.0", crash_path.read_text(encoding="utf-8"))
+            except Exception as e:
+                txt_crash.insert("1.0", f"Error reading log: {e}")
+        else:
+            txt_crash.insert("1.0", "(No crash log found)")
+
+        # Interactions Log (CSV)
+        f_csv = ttk.Frame(sub_nb)
+        sub_nb.add(f_csv, text="Interactions Log")
+        
+        # Treeview for CSV
+        columns = ("Timestamp", "Outcome", "Type")
+        tree_csv = ttk.Treeview(f_csv, columns=columns, show="headings")
+        tree_csv.heading("Timestamp", text="Timestamp")
+        tree_csv.heading("Outcome", text="Outcome")
+        tree_csv.heading("Type", text="Type") # Though current CSV might not have type, we can infer or just show raw cols
+        
+        tree_csv.column("Timestamp", width=150)
+        tree_csv.column("Outcome", width=300)
+        tree_csv.column("Type", width=100)
+        
+        scroll_csv = ttk.Scrollbar(f_csv, orient="vertical", command=tree_csv.yview)
+        tree_csv.configure(yscrollcommand=scroll_csv.set)
+        
+        tree_csv.pack(side="left", fill="both", expand=True)
+        scroll_csv.pack(side="right", fill="y")
+        
+        # Load CSV
+        csv_path = self.config.paths.interactions_csv
+        # resolve if relative
+        if not csv_path.is_absolute():
+             csv_path = self.config.project_root / csv_path
+        
+        if csv_path.exists():
+            try:
+                with csv_path.open("r", encoding="utf-8") as f:
+                    reader = csv.reader(f)
+                    # Skip header if heuristic suggests
+                    # Or just show everything.
+                    # Standard format: timestamp, outcome
+                    for row in reader:
+                        # Ensure row fits columns
+                        # Start simple
+                        row_vals = row + [""] * (3 - len(row))
+                        tree_csv.insert("", "end", values=row_vals[:3])
+            except Exception as e:
+                pass # Fail silently or show error in tree? 
+
     def _build_launch_tab(self):
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="Launch")
@@ -432,7 +520,12 @@ class ConfigEditor:
                 w = int(vals[1])
             except:
                 w = 1
-            outcomes.append(OutcomeConfig(text=t, weight=w))
+            # Retrieve type if exists (it should now)
+            typ = "Inconclusive"
+            if len(vals) > 2:
+                typ = str(vals[2])
+            
+            outcomes.append(OutcomeConfig(text=t, weight=w, type=typ))
             
         # Rebuild AppConfig (using defaults for parts we didn't edit)
         from .config import GPIOConfig

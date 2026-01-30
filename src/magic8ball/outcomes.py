@@ -13,6 +13,7 @@ from .config import CONFIG
 class Outcome:
     text: str
     weight: int = 1
+    type: str = "Inconclusive"
 
 
 def _as_int(x: Any, default: int = 1) -> int:
@@ -56,8 +57,9 @@ def load_outcomes_from_config() -> List[Outcome]:
             continue
         if weight < 1:
             weight = 1
-
-        out.append(Outcome(text=text, weight=weight))
+            
+        outcome_type = getattr(item, "type", None) or item.get("type") if isinstance(item, dict) else "Inconclusive"
+        out.append(Outcome(text=text, weight=weight, type=str(outcome_type)))
 
     return out
 
@@ -73,7 +75,8 @@ def load_outcomes_from_csv(csv_path: Path) -> List[Outcome]:
             weight = _as_int(row.get("weight") or 1, 1)
             if weight < 1:
                 weight = 1
-            outcomes.append(Outcome(text=text, weight=weight))
+            outcome_type = row.get("type", "Inconclusive")
+            outcomes.append(Outcome(text=text, weight=weight, type=outcome_type))
     return outcomes
 
 
@@ -97,15 +100,42 @@ def load_outcomes(csv_path: Optional[Path] = None) -> List[Outcome]:
     ]
 
 
-def choose_outcome(outcomes: List[Outcome]) -> Outcome:
+def choose_outcome(outcomes: List[Outcome], recent_history: List[str] = []) -> Outcome:
     if not outcomes:
         return Outcome("…", 1)
 
-    total = sum(max(1, o.weight) for o in outcomes)
+    # 1. Filter out exact repeat of the VERY LAST outcome (if any)
+    #    User said "avoid picking the same thing twice in a row"
+    candidates = outcomes
+    if recent_history:
+        last = recent_history[-1]
+        filtered = [o for o in outcomes if o.text != last]
+        # Only use filtered if we didn't filter EVERYTHING out (e.g. only 1 outcome exists)
+        if filtered:
+            candidates = filtered
+
+    # 2. Group by Type
+    by_type = {}
+    for o in candidates:
+        t = o.type
+        if t not in by_type:
+            by_type[t] = []
+        by_type[t].append(o)
+    
+    # 3. Pick Type Uniformly
+    #    keys() gives unique types.
+    if not by_type:
+        return outcomes[0]
+        
+    chosen_type = random.choice(list(by_type.keys()))
+    type_candidates = by_type[chosen_type]
+    
+    # 4. Pick Outcome Weighted within that Type
+    total = sum(max(1, o.weight) for o in type_candidates)
     r = random.uniform(0, total)
     upto = 0.0
-    for o in outcomes:
+    for o in type_candidates:
         upto += max(1, o.weight)
         if r <= upto:
             return o
-    return outcomes[-1]
+    return type_candidates[-1]
