@@ -1,0 +1,28 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+
+- name: Install system dependencies
+  apt:
+    name:
+      - git
+      - python3-pip
+      - python3-venv
+      - python3-tk
+      - python3-pygame  # System installation preferred on RPi
+      - libsdl2-mixer-2.0-0
+    state: present
+  become: yes
+
+- name: Enable SPI (if needed by hardware trigger, optional check)
+  command: raspi-config nonint do_spi 0
+  become: yes
+  ignore_errors: yes
+
+- name: Enable I2C (if needed)
+  command: raspi-config nonint do_i2c 0
+  become: yes
+  ignore_errors: yes

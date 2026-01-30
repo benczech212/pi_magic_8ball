@@ -1,0 +1,13 @@
+---
+- hosts: magicballs
+  become: no  # Default to user mode, elevate only when needed in roles
+  vars:
+    install_dir: "/home/lunacrat/pi_magic_8ball"
+    git_repo: "git@github.com:benczech212/pi_magic_8ball.git"
+    git_branch: "main"
+
+  roles:
+    - setup
+    - git
+    - deploy
+    - config

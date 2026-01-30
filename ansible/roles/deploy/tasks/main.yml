@@ -1,0 +1,54 @@
+---
+- name: Create Virtual Environment
+  command: python3 -m venv --system-site-packages .venv
+  args:
+    chdir: "{{ install_dir }}"
+    creates: "{{ install_dir }}/.venv"
+
+- name: Upgrade pip in venv
+  command: .venv/bin/pip install --upgrade pip
+  args:
+    chdir: "{{ install_dir }}"
+
+- name: Install requirements
+  command: .venv/bin/pip install -r requirements.txt
+  args:
+    chdir: "{{ install_dir }}"
+
+- name: Create Desktop Shortcuts Directory
+  file:
+    path: /home/lunacrat/Desktop
+    state: directory
+    owner: lunacrat
+    group: lunacrat
+
+- name: Create Magic 8 Ball Shortcut
+  template:
+    src: magic8ball.desktop.j2
+    dest: /home/lunacrat/Desktop/Magic 8 Ball.desktop
+    owner: lunacrat
+    group: lunacrat
+    mode: '0755'
+
+- name: Create Update Shortcut
+  template:
+    src: update.desktop.j2
+    dest: /home/lunacrat/Desktop/Update Magic 8 Ball.desktop
+    owner: lunacrat
+    group: lunacrat
+    mode: '0755'
+
+- name: Ensure Autostart Directory Exists
+  file:
+    path: /home/lunacrat/.config/autostart
+    state: directory
+    owner: lunacrat
+    group: lunacrat
+
+- name: Enable Autostart
+  file:
+    src: /home/lunacrat/Desktop/Magic 8 Ball.desktop
+    dest: /home/lunacrat/.config/autostart/Magic 8 Ball.desktop
+    state: link
+    owner: lunacrat
+    group: lunacrat

@@ -137,7 +137,7 @@ def _render_big_multiline_overlay(screen, text, max_width_ratio=0.86, color=(240
     chosen_font = pygame.font.SysFont(None, font_size)
     chosen_lines = [text]
 
-    while font_size > 24:
+    while font_size > 14:
         font = pygame.font.SysFont(None, font_size)
         lines = _wrap_lines(font, text, max_width)
         total_height = len(lines) * font.get_height()
@@ -145,6 +145,12 @@ def _render_big_multiline_overlay(screen, text, max_width_ratio=0.86, color=(240
             chosen_font = font
             chosen_lines = lines
             break
+        # Fallback: if we are getting very small (<=20) and still haven't found a fit,
+        # just accept this size as "best effort" to avoid sticking with the huge initial size.
+        if font_size <= 20: 
+            chosen_font = font
+            chosen_lines = lines
+            
         font_size -= 4
 
     total_height = len(chosen_lines) * chosen_font.get_height()
@@ -290,7 +296,11 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
 
     button = None
     if not disable_gpio and CONFIG.gpio.enabled:
-        button = ArcadeButton(CONFIG.gpio.button_pin, CONFIG.gpio.debounce_seconds)
+        button = ArcadeButton(
+        gpio_pin=CONFIG.gpio.button_pin,
+        debounce_seconds=CONFIG.gpio.debounce_seconds,
+        pull_up=CONFIG.gpio.button_pull_up
+    )
 
     lamp = ButtonLamp(
         LampConfig(
@@ -493,8 +503,8 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                 prompt_line = CONFIG.text.prompts[model.prompt_index] if CONFIG.text.prompts else f"MAGIC {CONFIG.name}"
                 prompt_line = _render_template(prompt_line)
 
-                _draw_centered_text(screen, font_big, title, 90, color=text)
-                _draw_centered_text(screen, font_med, prompt_line, 155, color=_blend(text, accent, 0.25))
+                _draw_centered_text_autofit(screen, title, 90, color=text, max_font_size=78)
+                _draw_centered_text_autofit(screen, prompt_line, 155, color=_blend(text, accent, 0.25), max_font_size=44)
                 _draw_centered_text_autofit(
                     screen,
                     subtitle,
@@ -517,7 +527,7 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
             elif model.state in (AppState.THINKING, AppState.FADEIN_THINKING):
                 title = _render_template(CONFIG.text.thinking_screen.title)
                 subtitle = model.thinking_subtitle or _render_template("...")
-                _draw_centered_text(screen, font_big, title, 90, color=text)
+                _draw_centered_text_autofit(screen, title, 90, color=text, max_font_size=78)
                 _draw_centered_text_autofit(
                     screen,
                     subtitle,
@@ -570,8 +580,9 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                 screen.blit(cached_overlay, cached_overlay_pos)
 
                 footer = _render_template(CONFIG.text.result_screen.footer)
-                _draw_centered_text(screen, font_small, f"Answer #{model.shown_count}", 40, color=muted)
-                _draw_centered_text(screen, font_small, footer, screen.get_height() - 60, color=muted)
+                footer = _render_template(CONFIG.text.result_screen.footer)
+                _draw_centered_text_autofit(screen, f"Answer #{model.shown_count}", 40, color=muted, max_font_size=28)
+                _draw_centered_text_autofit(screen, footer, screen.get_height() - 60, color=muted, max_font_size=28)
 
             if debug:
                 mode_hint = "Keyboard" if disable_gpio or button is None or not button.is_available() else "GPIO+Keyboard"

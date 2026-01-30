@@ -30,6 +30,7 @@ class ThemeConfig:
 class GPIOConfig:
     enabled: bool = True
     button_pin: int = 17
+    button_pull_up: bool = True
     debounce_seconds: float = 0.15
 
     lamp_enabled: bool = False

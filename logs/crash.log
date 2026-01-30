@@ -1,0 +1,25 @@
+2026-01-29 20:18:44,004 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 46, in <module>
+    editor.main()
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/editor.py", line 298, in main
+    app = ConfigEditor(root)
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/editor.py", line 36, in __init__
+    self._build_hardware_tab()
+AttributeError: 'ConfigEditor' object has no attribute '_build_hardware_tab'
+2026-01-29 20:29:55,210 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "\\wsl.localhost\Ubuntu\home\benczech\dev\pi_magic_8ball\src\main.py", line 45, in <module>
+    from .magic8ball import editor
+  File "\\wsl.localhost\Ubuntu\home\benczech\dev\pi_magic_8ball\src\magic8ball\editor.py", line 321
+    new_name = self.var_name.get()
+    ^^^^^^^^
+SyntaxError: expected 'except' or 'finally' block
+2026-01-29 20:30:12,869 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "\\wsl.localhost\Ubuntu\home\benczech\dev\pi_magic_8ball\src\main.py", line 45, in <module>
+    from .magic8ball import editor
+  File "\\wsl.localhost\Ubuntu\home\benczech\dev\pi_magic_8ball\src\magic8ball\editor.py", line 379
+    new_config = AppConfig(
+                          ^
+SyntaxError: '(' was never closed

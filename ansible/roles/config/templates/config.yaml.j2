@@ -1,0 +1,232 @@
+name: "7-BALL"
+
+ui:
+  window_width: 1280
+  window_height: 720
+  fullscreen: True
+  fps: 60
+  debug: false
+
+theme:
+  background: black
+  text: white
+  accent: red
+
+gpio:
+  enabled: true
+  button_pin: 17 #Green wire
+  debounce_seconds: 0.15
+
+  lamp_enabled: true
+  lamp_pin: 18 #Yellow wire
+  lamp_active_high: true
+  lamp_pwm_hz: 200
+
+behavior:
+  fades_enabled: true
+  animation_seconds: 5.0
+  idle_return_seconds: 20
+  result_fade_seconds: 5
+  result_fadeout_seconds: 3.5
+  prompt_fade_seconds: 0.9
+  thinking_fade_seconds: 0.6
+  square_settle_seconds: 1.0
+
+paths:
+  outcomes_csv: outcomes.csv
+  logs_dir: logs
+  interactions_csv: logs/interactions.csv
+
+text:
+  prompts:
+    - "TOUCH MY BIG BUTTON"
+    - "MAGIC {{name}}"
+    - "ASK THE VOID"
+    - "CONSULT THE CUBE OF DESTINY"
+    - "SHAKE THE {{name}}"
+    - "ROLL FOR DESTINY"
+    - "DIVINATION AS A SERVICE"
+    - "PROBABILITY SAYS HELLO"
+    - "THE ORACLE IS BUFFERING"
+    - "QUERY THE COSMIC CACHE"
+    - "ASK THE DUST"
+    - "TRUST THE VIBES"
+    - "IT DEPENDS (OBVIOUSLY)"
+    - "PRESS FOR WISDOM"
+    - "DEPLOY THE ANSWER"
+    - "SUMMON A HOT TAKE"
+  waiting_screen:
+    title: "MAGIC {{name}}"
+    subtitles:
+      - "Press button for answers. No promises for good stuff."
+      - "Press button. No refunds."
+      - "Press button. Only with consent."
+      - "Press button to consult the vibes."
+      - "Press button for cosmic insights."
+      - "Press button. Results may vary."
+      - "Press button. Batteries ARE included."
+      - "Press button. Don’t moop."
+      - "Press button. Radical self-reliance engaged."
+      - "Press button. The playa provides (sometimes)."
+
+  thinking_screen:
+    title: "SHAKING THE {{name}}..."
+    subtitles:
+      - "calibrating probability fields..."
+      - "consulting the dust ledger..."
+      - "aligning with the event horizon..."
+      - "asking a sparkle pony for directions..."
+      - "invoking radical self-reliance..."
+      - "establishing consent protocols..."
+      - "checking the moop map..."
+      - "negotiating with the void..."
+
+  result_screen:
+    footer: "Press button"
+
+
+outcomes:
+  - text: "Yes"
+    weight: 14
+  - text: "Most likely"
+    weight: 12
+  - text: "It is certain"
+    weight: 11
+  - text: "Unsanctioned"
+    weight: 6
+  - text: "Reply is hazy try again later"
+    weight: 10
+  - text: "Next year was better anyway"
+    weight: 7
+  - text: "Only with consent"
+    weight: 12
+  - text: "No refunds"
+    weight: 8
+  - text: "That sounds like moop"
+    weight: 9
+  - text: "Outlook is not good"
+    weight: 8
+  - text: "No"
+    weight: 12
+  - text: "Funk ya Burn"
+    weight: 5
+  - text: "Yo Momma"
+    weight: 4
+  - text: "Sounds like a sparkle pony"
+    weight: 6
+  - text: "Immediacy do it now"
+    weight: 7
+  - text: "Use Radical Self Reliance"
+    weight: 8
+  - text: "Volunteers are sexy"
+    weight: 6
+  - text: "Yes. Also hydrate."
+    weight: 14
+  - text: "Signs point to: maybe. Check the wind."
+    weight: 13
+  - text: "Ask again after a nap in the shade."
+    weight: 13
+  - text: "Consent says: ask clearly, then try again."
+    weight: 12
+  - text: "Trust the playa. Not the plan."
+    weight: 12
+  - text: "It’s a yes if you bring snacks."
+    weight: 12
+  - text: "The answer is in your cooler."
+    weight: 11
+  - text: "You already know. You’re stalling."
+    weight: 11
+  - text: "Do it, but label your cables first."
+    weight: 11
+  - text: "Proceed… with a headlamp."
+    weight: 11
+  - text: "Not today. The sun is judging you."
+    weight: 10
+  - text: "The universe says yes, your feet say no."
+    weight: 10
+  - text: "Your campmates will say “sure” and mean “no.”"
+    weight: 10
+  - text: "Flip a coin, then ignore it."
+    weight: 10
+  - text: "The porto-potties say: reconsider."
+    weight: 9
+  - text: "Only if you’re willing to carry it back."
+    weight: 9
+  - text: "Your future self will laugh. Do it anyway."
+    weight: 9
+  - text: "Yes, but bring earplugs."
+    weight: 9
+  - text: "Maybe. Consult the nearest art car."
+    weight: 9
+  - text: "If it sparkles, it’s probably fine."
+    weight: 9
+  - text: "Try again after you’ve eaten something real."
+    weight: 9
+  - text: "The dust says “lol.”"
+    weight: 8
+  - text: "The answer is: duct tape."
+    weight: 8
+  - text: "If you have to ask… it’s a yes."
+    weight: 8
+  - text: "Your vibe is correct; your timing is cursed."
+    weight: 8
+  - text: "It will work. Briefly."
+    weight: 8
+  - text: "Yes, but at 2:37am exactly."
+    weight: 7
+  - text: "You’ll forget. Set an alarm."
+    weight: 7
+  - text: "No. But it’ll make a great story."
+    weight: 7
+  - text: "The lampshade oracle says: dimmer."
+    weight: 7
+  - text: "Ask the person with the radio."
+    weight: 7
+  - text: "Probability favors the bold (and the sunscreened)."
+    weight: 7
+  - text: "Absolutely not. Unless it’s art."
+    weight: 6
+  - text: "The Temple says: be gentle."
+    weight: 6
+  - text: "The Playa provides… later."
+    weight: 6
+  - text: "Too many variables. Add more LEDs."
+    weight: 6
+  - text: "Not unless you secure it with two ratchet straps."
+    weight: 6
+  - text: "No. Please stop."
+    weight: 5
+  - text: "Hard no. Respectfully."
+    weight: 5
+  - text: "Your ex is somewhere nearby. Don’t."
+    weight: 5
+  - text: "The sound camp is about to drop. Wait."
+    weight: 5
+  - text: "No, because you didn’t test it at home."
+    weight: 5
+  - text: "Yes, but only if you share it."
+    weight: 4
+  - text: "Rare but possible. Like finding your friend on 2% battery."
+    weight: 4
+  - text: "It’s a yes, but you must tip the ice runner."
+    weight: 4
+  - text: "Do it. Yell “SCIENCE!” first."
+    weight: 3
+  - text: "Touch my button some more please ;)"
+    weight: 3
+  - text: "This is the moment you become a legend."
+    weight: 2
+  - text: "The man in the tutu approves."
+    weight: 2
+  - text: "A stranger will hand you exactly what you need."
+    weight: 2
+  - text: "The Playa says yes. The city says no."
+    weight: 2
+  - text: "You are the chosen one (for this dumb job)."
+    weight: 1
+  - text: "Cosmic green light. Full send."
+    weight: 1
+  - text: "How should I know?"
+    weight: 1
+  - text: "Meow!"
+    weight: 20

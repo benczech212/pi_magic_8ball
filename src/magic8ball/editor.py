@@ -1,6 +1,12 @@
+import time
 import tkinter as tk
 from tkinter import ttk, colorchooser, messagebox
-from .config import CONFIG, save_config, AppConfig, ThemeConfig, UIConfig, BehaviorConfig, TextConfig, OutcomeConfig
+from .config import (
+    CONFIG, save_config, AppConfig, ThemeConfig, UIConfig, BehaviorConfig, 
+    TextConfig, OutcomeConfig, WaitingScreenText, ThinkingScreenText, ResultScreenText
+)
+from .gpio_button import ArcadeButton
+from .lamp import ButtonLamp, LampConfig, LampMode
 
 class ConfigEditor:
     def __init__(self, root):
@@ -27,6 +33,18 @@ class ConfigEditor:
         self._build_theme_tab()
         self._build_text_tab()
         self._build_outcomes_tab()
+        self._build_hardware_tab()
+
+        # Initialize Hardware
+        self.lamp = ButtonLamp(
+            LampConfig(
+                enabled=self.config.gpio.enabled and self.config.gpio.lamp_enabled,
+                pin=self.config.gpio.lamp_pin,
+                active_high=self.config.gpio.lamp_active_high,
+                pwm_hz=self.config.gpio.lamp_pwm_hz
+            )
+        )
+        self.button = ArcadeButton(self.config.gpio.button_pin, self.config.gpio.debounce_seconds)
 
         # Footer
         frame_footer = ttk.Frame(root)
@@ -37,6 +55,35 @@ class ConfigEditor:
         
         btn_cancel = ttk.Button(frame_footer, text="Cancel", command=root.destroy)
         btn_cancel.pack(side="right", padx=10)
+
+        # Start hardware loop
+        self._update_hardware_loop()
+
+    def __del__(self):
+        if hasattr(self, 'lamp'):
+            self.lamp.close()
+
+    def _update_hardware_loop(self):
+        now = time.monotonic()
+        if hasattr(self, 'lamp'):
+            self.lamp.update(now)
+        
+        if hasattr(self, 'button'):
+            # Poll button for debug visibility
+            # Since poll_pressed eats the event, we just check if it triggered
+            is_pressed = False
+            if self.button.poll_pressed():
+                is_pressed = True
+            
+            # Update UI indicator if the tab is visible (optimization)
+            # But for simplicity, just update if widget exists
+            if hasattr(self, 'lbl_btn_status'):
+                if is_pressed:
+                     self.lbl_btn_status.config(text="PRESSED", foreground="green")
+                     # Reset after a short delay so user sees the flash
+                     self.root.after(200, lambda: self.lbl_btn_status.config(text="RELEASED", foreground="gray"))
+        
+        self.root.after(50, self._update_hardware_loop)
 
     def _fmt_col(self, c):
         if isinstance(c, (tuple, list)):
@@ -165,9 +212,111 @@ class ConfigEditor:
                 
         ttk.Button(frame_controls, text="Add Outcome", command=add_item).pack(fill="x", pady=5)
         ttk.Button(frame_controls, text="Remove Selected", command=delete_item).pack(fill="x", pady=5)
+        
+    def _build_hardware_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="Hardware Test")
+        
+        frame = ttk.Frame(tab, padding="20")
+        frame.pack(fill="both", expand=True)
+
+        # 1. Lamp Control
+        lf_lamp = ttk.LabelFrame(frame, text="Lamp Control", padding=10)
+        lf_lamp.pack(fill="x", pady=10)
+        
+        ttk.Label(lf_lamp, text="Test the LED output (GPIO " + str(self.config.gpio.lamp_pin) + "):").pack(anchor="w", pady=(0, 10))
+        
+        f_buttons = ttk.Frame(lf_lamp)
+        f_buttons.pack(fill="x")
+        
+        def set_lamp(mode):
+            if hasattr(self, 'lamp'):
+                self.lamp.set_mode(mode)
+
+        ttk.Button(f_buttons, text="OFF", command=lambda: set_lamp(LampMode.OFF)).pack(side="left", padx=5)
+        ttk.Button(f_buttons, text="IDLE (Breathe)", command=lambda: set_lamp(LampMode.IDLE)).pack(side="left", padx=5)
+        ttk.Button(f_buttons, text="THINKING (Pulse)", command=lambda: set_lamp(LampMode.THINKING)).pack(side="left", padx=5)
+        ttk.Button(f_buttons, text="RESULT (On)", command=lambda: set_lamp(LampMode.RESULT)).pack(side="left", padx=5)
+
+        # 2. Button Input
+        lf_btn = ttk.LabelFrame(frame, text="Button Input", padding=10)
+        lf_btn.pack(fill="x", pady=10)
+        
+        ttk.Label(lf_btn, text="Press the physical Arcade Button (GPIO " + str(self.config.gpio.button_pin) + ").").pack(anchor="w")
+        
+        f_status = ttk.Frame(lf_btn, padding=10)
+        f_status.pack(fill="x")
+        
+        ttk.Label(f_status, text="Status: ").pack(side="left")
+        self.lbl_btn_status = ttk.Label(f_status, text="RELEASED", font=("Arial", 14, "bold"), foreground="gray")
+        self.lbl_btn_status.pack(side="left", padx=10)
+
+        # 3. Advanced GPIO Settings
+        lf_adv = ttk.LabelFrame(frame, text="Advanced GPIO", padding=10)
+        lf_adv.pack(fill="x", pady=10)
+
+        # Button Pull Up/Down
+        f_pull = ttk.Frame(lf_adv)
+        f_pull.pack(fill="x", pady=5)
+        ttk.Label(f_pull, text="Button Resistor:").pack(side="left")
+        self.var_pull = tk.StringVar(value="Pull Up" if self.config.gpio.button_pull_up else "Pull Down")
+        cb_pull = ttk.Combobox(f_pull, textvariable=self.var_pull, values=["Pull Up", "Pull Down"], state="readonly", width=12)
+        cb_pull.pack(side="left", padx=10)
+        ttk.Label(f_pull, text="(Try switching if button triggers randomly)").pack(side="left", padx=5)
+
+        # Debounce
+        f_deb = ttk.Frame(lf_adv)
+        f_deb.pack(fill="x", pady=5)
+        ttk.Label(f_deb, text="Debounce (sec):").pack(side="left")
+        self.var_debounce = tk.StringVar(value=str(self.config.gpio.debounce_seconds))
+        ttk.Entry(f_deb, textvariable=self.var_debounce, width=8).pack(side="left", padx=10)
+        ttk.Label(f_deb, text="(Increase to 0.3+ if noisy)").pack(side="left", padx=5)
+
+        # Lamp PWM
+        f_pwm = ttk.Frame(lf_adv)
+        f_pwm.pack(fill="x", pady=5)
+        ttk.Label(f_pwm, text="Lamp PWM (Hz):").pack(side="left")
+        self.var_pwm = tk.StringVar(value=str(self.config.gpio.lamp_pwm_hz))
+        ttk.Entry(f_pwm, textvariable=self.var_pwm, width=8).pack(side="left", padx=10)
+        ttk.Label(f_pwm, text="(Adjust if lamp flickers)").pack(side="left", padx=5)
+
+        # Update button when settings change (so they can test immediately)
+        def update_hardware_params(event=None):
+            try:
+                # Re-init button with new settings
+                is_pull_up = (self.var_pull.get() == "Pull Up")
+                new_db = float(self.var_debounce.get())
+                if hasattr(self, 'button'):
+                    # We can't easily destroy/recreate safely in loop, 
+                    # but we can try just replacing object if thread-safe enough for this simple app
+                    self.button = ArcadeButton(
+                        self.config.gpio.button_pin, 
+                        debounce_seconds=new_db,
+                        pull_up=is_pull_up
+                    )
+                # Re-init lamp? (if needed)
+            except ValueError:
+                pass
+        
+        cb_pull.bind("<<ComboboxSelected>>", update_hardware_params)
+        # Entry widgets might need specific 'Save' to apply generally, but let's leave it for now
+        # Ideally we only apply on 'Save Settings', but live update for testing is nice.
+        # Let's add a strict "Apply Test Settings" button if we want live update, 
+        # but for now rely on Save -> Restart loop for full confidence, 
+        # OR just update button object here for strictly the TEST tab correctness.
+        cb_pull.bind("<<ComboboxSelected>>", update_hardware_params, add="+")
+
 
     def save(self):
         # 1. Reconstruct config objects
+        try:
+            # Parse Advanced GPIO
+            pull_up = (self.var_pull.get() == "Pull Up")
+            debounce = float(self.var_debounce.get())
+            pwm = int(self.var_pwm.get())
+        except ValueError:
+            messagebox.showerror("Error", "Invalid numeric value in GPIO settings.")
+            return
         
         # General
         new_name = self.var_name.get()
@@ -227,12 +376,25 @@ class ConfigEditor:
             outcomes.append(OutcomeConfig(text=t, weight=w))
             
         # Rebuild AppConfig (using defaults for parts we didn't edit)
+        from .config import GPIOConfig
+
+        new_gpio = GPIOConfig(
+            enabled=self.config.gpio.enabled,
+            button_pin=self.config.gpio.button_pin,
+            button_pull_up=pull_up,
+            debounce_seconds=debounce,
+            lamp_enabled=self.config.gpio.lamp_enabled,
+            lamp_pin=self.config.gpio.lamp_pin,
+            lamp_active_high=self.config.gpio.lamp_active_high,
+            lamp_pwm_hz=pwm
+        )
+
         new_config = AppConfig(
             project_root=self.config.project_root,
             name=new_name,
             ui=ui,
             theme=theme,
-            gpio=self.config.gpio, # Passthrough
+            gpio=new_gpio,
             behavior=behavior,
             paths=self.config.paths, # Passthrough
             text=text,

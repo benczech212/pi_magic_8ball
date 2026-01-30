@@ -1,0 +1,9 @@
+---
+- name: Deploy Configuration
+  template:
+    src: config.yaml.j2
+    dest: "{{ install_dir }}/config.yaml"
+    owner: lunacrat
+    group: lunacrat
+    mode: '0644'
+  # We use a template so we can inject host-specific vars if needed (e.g. name of the ball)

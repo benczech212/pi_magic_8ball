@@ -1,0 +1,17 @@
+---
+- name: Ensure install directory exists
+  file:
+    path: "{{ install_dir | default('/home/lunacrat/pi_magic_8ball') }}"
+    state: directory
+    owner: lunacrat
+    group: lunacrat
+    mode: '0755'
+
+- name: Checkout Repository
+  git:
+    repo: "{{ git_repo }}"
+    dest: "{{ install_dir | default('/home/lunacrat/pi_magic_8ball') }}"
+    version: "{{ git_branch | default('main') }}"
+    force: yes
+    update: yes
+  become: no

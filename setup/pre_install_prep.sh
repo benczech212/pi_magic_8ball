@@ -211,9 +211,25 @@ Terminal=false
 Categories=Utility;Settings;
 DESKTOP_2_EOF
 
+  # 3. Update App Shortcut
+  update_desktop_file="${DESKTOP_DIR}/Update Magic 8 Ball.desktop"
+  log "Creating ${update_desktop_file}"
+  cat > "${update_desktop_file}" <<DESKTOP_3_EOF
+[Desktop Entry]
+Type=Application
+Name=Update Magic 8 Ball
+Comment=Git Pull and Restart
+Exec=${INSTALL_DIR}/scripts/update.sh
+Path=${INSTALL_DIR}
+Icon=system-software-update
+Terminal=true
+Categories=Utility;System;
+DESKTOP_3_EOF
+
   # Make them executable
   chmod +x "${desktop_file}"
   chmod +x "${config_desktop_file}"
+  chmod +x "${update_desktop_file}"
 
   # Copy MAIN app to autostart (only the main app)
   log "Enabling Autostart for Main App"
