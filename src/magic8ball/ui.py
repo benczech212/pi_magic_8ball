@@ -271,7 +271,7 @@ def _compute_square_pose(now: float, model: AppModel) -> Tuple[float, float]:
     return (angle, motion)
 
 
-def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
+def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug: Optional[bool] = None):
     pygame.init()
     pygame.font.init()
     pygame.display.set_caption("Magic 7-Ball")
@@ -303,7 +303,7 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None):
 
     now0 = time.monotonic()
     model = AppModel(last_activity_at=now0, fadein_started_at=now0)
-    debug = CONFIG.ui.debug
+    debug = CONFIG.ui.debug if debug is None else debug
     last_event = "none"
 
     bg = CONFIG.theme.background
