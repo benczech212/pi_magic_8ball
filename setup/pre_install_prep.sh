@@ -69,7 +69,9 @@ install_packages() {
     python3-pygame \
     fonts-dejavu \
     fonts-freefont-ttf \
-    python3-tk
+    python3-tk \
+    swig \
+    liblgpio-dev
 }
 
 ensure_groups() {

@@ -1,2 +1,4 @@
 pygame
 PyYAML
+gpiozero
+lgpio

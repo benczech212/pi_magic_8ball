@@ -52,3 +52,5 @@ src/magic8ball/__pycache__/gpio_button.cpython-310.pyc
 src/magic8ball/__pycache__/gpio_button.cpython-311.pyc
 src/magic8ball/__pycache__/ui.cpython-310.pyc
 src/magic8ball/__pycache__/ui.cpython-311.pyc
+logs/interactions.csv
+logs/crash.log

@@ -24,6 +24,9 @@ class ThemeConfig:
     background: ColorType = (5, 5, 8)
     text: ColorType = (240, 240, 240)
     accent: ColorType = (200, 77, 255)
+    logo_path: Optional[str] = None
+    logo_width: Optional[int] = None
+    font_path: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -37,6 +40,7 @@ class GPIOConfig:
     lamp_pin: int = 18
     lamp_active_high: bool = True
     lamp_pwm_hz: int = 200
+    lamp_idle_speed: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -242,6 +246,9 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         background=_parse_color(_deep_get(data, "theme.background", None), (5, 5, 8)),
         text=_parse_color(_deep_get(data, "theme.text", None), (240, 240, 240)),
         accent=_parse_color(_deep_get(data, "theme.accent", None), (200, 77, 255)),
+        logo_path=_deep_get(data, "theme.logo_path", None),
+        logo_width=_deep_get(data, "theme.logo_width", None),
+        font_path=_deep_get(data, "theme.font_path", None),
     )
 
     gpio = GPIOConfig(
@@ -252,6 +259,7 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         lamp_pin=_deep_get(data, "gpio.lamp_pin", 18),
         lamp_active_high=_deep_get(data, "gpio.lamp_active_high", True),
         lamp_pwm_hz=_deep_get(data, "gpio.lamp_pwm_hz", 200),
+        lamp_idle_speed=_deep_get(data, "gpio.lamp_idle_speed", 1.0),
     )
 
     behavior = BehaviorConfig(
@@ -344,6 +352,9 @@ def save_config(config: AppConfig, path: Optional[Path] = None):
             "background": fmt_col(config.theme.background),
             "text": fmt_col(config.theme.text),
             "accent": fmt_col(config.theme.accent),
+            "logo_path": config.theme.logo_path,
+            "logo_width": config.theme.logo_width,
+            "font_path": config.theme.font_path,
         },
         "gpio": {
             "enabled": config.gpio.enabled,
@@ -353,6 +364,7 @@ def save_config(config: AppConfig, path: Optional[Path] = None):
             "lamp_pin": config.gpio.lamp_pin,
             "lamp_active_high": config.gpio.lamp_active_high,
             "lamp_pwm_hz": config.gpio.lamp_pwm_hz,
+            "lamp_idle_speed": config.gpio.lamp_idle_speed,
         },
         "behavior": {
              "fades_enabled": config.behavior.fades_enabled,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from enum import Enum, auto
 from typing import Optional, Tuple
 
@@ -98,10 +99,19 @@ def _draw_centered_text_autofit(
     max_w = int(screen_w * max_width_ratio)
 
     size = max_font_size
-    chosen_font = pygame.font.SysFont(None, size, bold=bold)
+    
+    def get_font(s):
+        if CONFIG.theme.font_path and Path(CONFIG.theme.font_path).exists():
+           try:
+               return pygame.font.Font(str(CONFIG.theme.font_path), s)
+           except Exception:
+               pass
+        return pygame.font.SysFont(None, s, bold=bold)
+
+    chosen_font = get_font(size)
 
     while size > min_font_size:
-        f = pygame.font.SysFont(None, size, bold=bold)
+        f = get_font(size)
         if f.size(text)[0] <= max_w:
             chosen_font = f
             break
@@ -302,12 +312,36 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
         pull_up=CONFIG.gpio.button_pull_up
     )
 
+    logo_surf = None
+    if CONFIG.theme.logo_path:
+        lp = Path(CONFIG.theme.logo_path)
+        if not lp.is_absolute():
+            lp = CONFIG.project_root / lp
+        
+        if lp.exists():
+            try:
+                img = pygame.image.load(str(lp)).convert_alpha()
+                # Scale if width provided (as percentage of screen width)
+                if CONFIG.theme.logo_width and CONFIG.theme.logo_width > 0:
+                    # CONFIG.theme.logo_width is now treated as 0-100 percent
+                    percent = float(CONFIG.theme.logo_width) / 100.0
+                    target_w = int(CONFIG.ui.window_width * percent)
+                    
+                    # calc h to keep aspect
+                    aspect = img.get_height() / img.get_width()
+                    h = int(target_w * aspect)
+                    img = pygame.transform.smoothscale(img, (target_w, h))
+                logo_surf = img
+            except Exception as e:
+                print(f"Failed to load logo: {e}")
+
     lamp = ButtonLamp(
         LampConfig(
             enabled=(not disable_gpio and CONFIG.gpio.enabled and CONFIG.gpio.lamp_enabled),
             pin=CONFIG.gpio.lamp_pin,
             active_high=CONFIG.gpio.lamp_active_high,
             pwm_hz=CONFIG.gpio.lamp_pwm_hz,
+            idle_speed=CONFIG.gpio.lamp_idle_speed,
         )
     )
 
@@ -498,11 +532,19 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
             _draw_square(screen, center, square_size, now, bg, accent, angle=angle, motion=motion)
 
             if model.state in (AppState.PROMPT, AppState.FADEIN_PROMPT):
+                # Draw Logo if exists
+                if logo_surf:
+                    # Center logo
+                    l_rect = logo_surf.get_rect(center=(screen.get_width()//2, screen.get_height()//2))
+                    screen.blit(logo_surf, l_rect)
+
                 title = _render_template(CONFIG.text.waiting_screen.title)
                 subtitle = model.waiting_subtitle or _render_template("Press button")
                 prompt_line = CONFIG.text.prompts[model.prompt_index] if CONFIG.text.prompts else f"MAGIC {CONFIG.name}"
                 prompt_line = _render_template(prompt_line)
 
+                # Adjusted heights to make room for logo if present? 
+                # For now just draw text on top or existing positions.
                 _draw_centered_text_autofit(screen, title, 90, color=text, max_font_size=78)
                 _draw_centered_text_autofit(screen, prompt_line, 155, color=_blend(text, accent, 0.25), max_font_size=44)
                 _draw_centered_text_autofit(

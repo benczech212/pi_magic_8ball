@@ -26,6 +26,7 @@ class LampConfig:
     pin: int
     active_high: bool = True
     pwm_hz: int = 200
+    idle_speed: float = 1.0
 
 
 class ButtonLamp:
@@ -69,7 +70,9 @@ class ButtonLamp:
 
         elif self.mode == LampMode.IDLE:
             # slow breathe: 0.08 .. 0.55
-            t = now * 1.2
+            # Use idle_speed multiplier (default 1.0, user can increase)
+            speed = max(0.1, float(self.cfg.idle_speed))
+            t = now * 1.2 * speed
             v = 0.315 + 0.235 * math.sin(t)
             self._set(max(0.0, min(1.0, v)))
 
