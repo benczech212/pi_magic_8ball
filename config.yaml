@@ -23,6 +23,8 @@ gpio:
   lamp_idle_speed: 1.5
 behavior:
   fades_enabled: true
+  title_cycle_seconds: 10.0
+  title_fade_seconds: 1.0
   animation_seconds: 5.0
   idle_return_seconds: 20
   result_fade_seconds: 5
@@ -37,10 +39,8 @@ paths:
 text:
   prompts:
   - TOUCH MY BIG BUTTON
-  - MAGIC {{name}}
   - ASK THE VOID
   - CONSULT THE CUBE OF DESTINY
-  - SHAKE THE {{name}}
   - ROLL FOR DESTINY
   - DIVINATION AS A SERVICE
   - PROBABILITY SAYS HELLO

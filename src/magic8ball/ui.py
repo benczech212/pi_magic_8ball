@@ -40,12 +40,33 @@ class AppModel:
     last_activity_at: float = 0.0
     shown_count: int = 0
     prompt_index: int = 0
+    active_prompt_text: str = ""
+    thinking_duration: float = 3.0
+    
+    # NEW: subtitle cycling state
+    subtitle_last_cycle_at: float = 0.0
+    subtitle_fade_start_at: float = 0.0
+    next_subtitle: str = ""
+    is_fading_subtitle: bool = False
 
     # NEW: capture end-of-thinking rotation phase for "nearest rotation" settle
     settle_started_at: float = 0.0
     settle_angle_start: float = 0.0  # angle in radians (0..2π)
     settle_angle_target: float = 0.0  # either 0 or 2π (nearest)
     settle_motion_start: float = 1.0  # motion amplitude at settle start (usually 1.0)
+
+    # NEW: idle phase cycling (0=Title, 1=LogoText, 2=FullLogo)
+    idle_phase: int = 0
+    next_idle_phase: int = 0
+    # NEW: idle phase cycling (0=Title, 1=LogoText, 2=FullLogo)
+    idle_phase: int = 0
+    next_idle_phase: int = 0
+    idle_last_cycle_at: float = 0.0
+    idle_fade_start_at: float = 0.0
+    is_fading_idle: bool = False
+    
+    # NEW: Spin Physics
+    spin_direction: int = 1 # 1 or -1
 
 
 def _lerp(a: int, b: int, t: float) -> int:
@@ -83,7 +104,7 @@ def _draw_centered_text_autofit(
     text: str,
     y: int,
     color: Tuple[int, int, int],
-    max_width_ratio: float = 0.92,
+    max_width_ratio: float = 0.90,  # Safer default
     max_font_size: int = 64,
     min_font_size: int = 18,
     bold: bool = False,
@@ -112,7 +133,12 @@ def _draw_centered_text_autofit(
 
     while size > min_font_size:
         f = get_font(size)
-        if f.size(text)[0] <= max_w:
+        w, h = f.size(text)
+        if w <= max_w:
+            # Extra safety: ensure it doesn't bleed off screen edges
+            if (screen_w - w) < 20:
+                 size -= 2
+                 continue
             chosen_font = f
             break
         size -= 2
@@ -120,6 +146,36 @@ def _draw_centered_text_autofit(
     surf = chosen_font.render(text, True, color)
     rect = surf.get_rect(center=(screen_w // 2, y))
     screen.blit(surf, rect)
+
+def _draw_centered_text_multiline(
+    screen: pygame.Surface,
+    text: str,
+    y: int,
+    color: Tuple[int, int, int],
+    max_width_ratio: float = 0.90,
+    font_size: int = 44,
+):
+    """Simple multiline centered text"""
+    if not text: return
+    
+    screen_w = screen.get_width()
+    max_w = int(screen_w * max_width_ratio)
+    font = pygame.font.SysFont(None, font_size)
+    
+    lines = _wrap_lines(font, text, max_w)
+    h = font.get_height()
+    total_h = len(lines) * h
+    
+    # We want to center the block around y? Or start at y?
+    # Usually start at y (baseline-ish) or center.
+    # Let's align top at y.
+    
+    curr_y = y
+    for line in lines:
+        surf = font.render(line, True, color)
+        rect = surf.get_rect(center=(screen_w // 2, curr_y + h // 2))
+        screen.blit(surf, rect)
+        curr_y += h
 
 
 def _wrap_lines(font, text: str, max_width: int):
@@ -168,7 +224,10 @@ def _render_big_multiline_overlay(screen, text, max_width_ratio=0.86, color=(240
     overlay_w = max_width
 
     overlay = pygame.Surface((overlay_w, overlay_h), pygame.SRCALPHA).convert_alpha()
-
+    # User Request: "slight transparent black background behind the text"
+    # Fill with semi-transparent black (e.g. alpha 140)
+    overlay.fill((0, 0, 0, 140))
+    
     y = 0
     for line in chosen_lines:
         surf = chosen_font.render(line, True, color)
@@ -181,52 +240,49 @@ def _render_big_multiline_overlay(screen, text, max_width_ratio=0.86, color=(240
     return overlay, (x, y)
 
 
-def _draw_square(screen, center, size, now_t, bg, accent, angle: float, motion: float):
+def _draw_spinning_icon(screen, center, size, now_t, icon_surf, angle: float, motion: float):
     """
-    angle: radians
-    motion: 0..1 controls pulse/wobble/thickness dynamics (0 = static rest pose)
+    Rotates and draws the icon.
+    size: Approximate radius/half-width constraint.
+    angle: radians.
+    motion: 0..1 (0 = static rest).
     """
+    if not icon_surf:
+        return
+
     cx, cy = center
-    motion = max(0.0, min(1.0, motion))
-
-    # pulse affects thickness and highlight; keep baseline stable at motion=0
-    pulse = 0.5 + 0.5 * math.sin(now_t * 7.0) * motion
-    thickness = max(2, int(3 + 7 * pulse))
-
-    half = size / 2.0
-
-    def rot(x, y, a):
-        ca, sa = math.cos(a), math.sin(a)
-        return (x * ca - y * sa, x * sa + y * ca)
-
-    plate = _blend(bg, (0, 0, 0), 0.55)
-    border = _blend(accent, (255, 255, 255), 0.15)
-    fill = _blend(accent, bg, 0.35)
-
-    pygame.draw.rect(
-        screen,
-        plate,
-        pygame.Rect(cx - size, cy - size, size * 2, size * 2),
-        border_radius=24,
-    )
-
-    pts = []
-    for (x, y) in [(-half, -half), (half, -half), (half, half), (-half, half)]:
-        rx, ry = rot(x, y, angle)
-        pts.append((cx + rx, cy + ry))
-    pygame.draw.polygon(screen, border, pts, thickness)
-
-    wobble = 0.08 * size * math.sin(now_t * 9.0) * motion
-    inner = size * 0.55 + wobble
-    half2 = inner / 2.0
-
-    pts2 = []
-    for (x, y) in [(-half2, -half2), (half2, -half2), (half2, half2), (-half2, half2)]:
-        rx, ry = rot(x, y, -angle * 1.3)
-        pts2.append((cx + rx, cy + ry))
-
-    fill2 = _blend(fill, (255, 255, 255), 0.15 * (0.5 + 0.5 * pulse))
-    pygame.draw.polygon(screen, fill2, pts2, 0)
+    
+    # Scale icon to fit size*2
+    # We want consistent size, maybe slight pulse
+    pulse = 0.5 + 0.5 * math.sin(now_t * 6.0) * motion
+    scale_factor = 1.0 + 0.05 * pulse
+    
+    # Base scale: icon should fit within size*2 box
+    t_w = size * 2
+    t_h = size * 2
+    
+    # We assume icon_surf is already reasonably sized or we scale it here?
+    # Better to scale it once at load time or use smoothscale here if it changes?
+    # smoothscale is expensive per frame. 
+    # Let's assume icon_surf passed in is "base size" (approx 200-400px).
+    
+    # Rotate
+    # pygame.transform.rotate expands the surface. We must re-center.
+    # angle is radians. rotate takes degrees counter-clockwise.
+    deg = math.degrees(angle)
+    
+    rot_surf = pygame.transform.rotate(icon_surf, deg)
+    
+    # Pulse scale? 
+    # If we want pulse, we should scale *before* rotate or after?
+    # After is easier.
+    if motion > 0.1:
+         w = int(rot_surf.get_width() * scale_factor)
+         h = int(rot_surf.get_height() * scale_factor)
+         rot_surf = pygame.transform.smoothscale(rot_surf, (w, h))
+    
+    rect = rot_surf.get_rect(center=(cx, cy))
+    screen.blit(rot_surf, rect)
 
 
 class FadeOverlay:
@@ -287,7 +343,7 @@ def _compute_square_pose(now: float, model: AppModel) -> Tuple[float, float]:
     return (angle, motion)
 
 
-def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug: Optional[bool] = None):
+def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug: Optional[bool] = None, screenshot_mode: Optional[str] = None):
     pygame.init()
     pygame.font.init()
     pygame.display.set_caption("Magic 7-Ball")
@@ -312,28 +368,37 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
         pull_up=CONFIG.gpio.button_pull_up
     )
 
-    logo_surf = None
-    if CONFIG.theme.logo_path:
-        lp = Path(CONFIG.theme.logo_path)
-        if not lp.is_absolute():
-            lp = CONFIG.project_root / lp
+    # Load Assets
+    def _load_asset(name, target_width=None):
+        # Try both src/assets and assets (flexibility)
+        p = CONFIG.project_root / "src" / "assets" / name
+        if not p.exists():
+             p = CONFIG.project_root / "assets" / name
         
-        if lp.exists():
-            try:
-                img = pygame.image.load(str(lp)).convert_alpha()
-                # Scale if width provided (as percentage of screen width)
-                if CONFIG.theme.logo_width and CONFIG.theme.logo_width > 0:
-                    # CONFIG.theme.logo_width is now treated as 0-100 percent
-                    percent = float(CONFIG.theme.logo_width) / 100.0
-                    target_w = int(CONFIG.ui.window_width * percent)
-                    
-                    # calc h to keep aspect
-                    aspect = img.get_height() / img.get_width()
-                    h = int(target_w * aspect)
-                    img = pygame.transform.smoothscale(img, (target_w, h))
-                logo_surf = img
-            except Exception as e:
-                print(f"Failed to load logo: {e}")
+        if not p.exists():
+            print(f"Warning: Asset {name} not found at {p}")
+            return None
+        try:
+             img = pygame.image.load(str(p)).convert_alpha()
+             if target_width:
+                 asp = img.get_height() / img.get_width()
+                 h = int(target_width * asp)
+                 img = pygame.transform.smoothscale(img, (target_width, h))
+             return img
+        except Exception as e:
+             print(f"Failed to load {name}: {e}")
+             return None
+
+    icon_surf = _load_asset("Logo Icon.png", target_width=CONFIG.ui.window_height // 2) # approx size
+    logo_text_surf = _load_asset("Logo Text.png", target_width=int(CONFIG.ui.window_width * 0.8))
+    logo_full_surf = _load_asset("LUNARCRATS-LOGO.png", target_width=int(CONFIG.ui.window_width * 0.6))
+
+    # Keep original logo logic if configured explicitly, otherwise use new identity
+    # User said "Use all three" - implying new identity replaces old generic logo logic.
+    # But let's keep logo_surf var if they have a custom theme logo path in config?
+    # Config theme logo is overridden by this request. 
+    logo_surf = None # explicitly clear old mechanism
+
 
     lamp = ButtonLamp(
         LampConfig(
@@ -373,31 +438,61 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
         model.state = AppState.FADEIN_PROMPT
         model.fadein_started_at = time.monotonic()
         model.waiting_subtitle = _render_template(_pick_subtitle(CONFIG.text.waiting_screen.subtitles))
+        model.subtitle_last_cycle_at = time.monotonic()
+        model.is_fading_subtitle = False
+        
+        # Reset title state
+        model.current_title = _render_template(CONFIG.text.waiting_screen.title)
+        model.title_last_cycle_at = time.monotonic()
+        model.is_fading_title = False
+        model.next_title = ""
 
     def start_thinking_fadein():
         model.state = AppState.FADEIN_THINKING
         model.fadein_started_at = time.monotonic()
         model.thinking_started_at = time.monotonic()
+        
+        # New Question = Random Spin Direction
+        model.spin_direction = random.choice([1, -1])
+        
+        # Random Duration
+        t_min = float(getattr(CONFIG.behavior, "thinking_min_seconds", 2.0))
+        t_max = float(getattr(CONFIG.behavior, "thinking_max_seconds", 5.0))
+        model.thinking_duration = random.uniform(t_min, t_max)
+
         model.thinking_subtitle = _render_template(_pick_subtitle(CONFIG.text.thinking_screen.subtitles))
+        
+        # Capture current prompt for logging
+        p_text = "MAGIC 7-BALL"
+        if CONFIG.text.prompts:
+             p_text = CONFIG.text.prompts[model.prompt_index]
+        model.active_prompt_text = _render_template(p_text)
 
         nonlocal cached_outcome_text, cached_overlay
         cached_outcome_text = None
         cached_overlay = None
 
     def capture_settle(now: float):
-        """Capture current animated angle modulo 2π and choose nearest rest target (0 or 2π)."""
-        angle_speed = 2.2
-        two_pi = math.tau
-        a = (now * angle_speed) % two_pi  # 0..2π
-
-        # Nearest rest is either 0 or 2π, whichever is closer
-        # If angle is > π, target is 2π (smaller rotation forward); else 0
-        target = two_pi if a > (two_pi / 2.0) else 0.0
-
+        """Capture current spin state and start exponential decay."""
+        # Initial angular velocity (radians/sec)
+        base_speed = float(getattr(CONFIG.behavior, "spin_speed", 1.0)) * 0.5
+        spin_speed = base_speed * 8.0 # Match the thinking speed multiplier
+        
+        # v0 = current velocity with direction
+        v0 = spin_speed * model.spin_direction
+        
+        # Current angle
+        # Re-calculate exactly as _compute_square_pose would have for continuity
+        # But _compute_square_pose uses (now * speed).
+        # We need to capture the *effective* angle at 'now'.
+        # Since 'now' increases monotonically, angle = now * speed * dir.
+        current_angle = (now * spin_speed * model.spin_direction)
+        
         model.settle_started_at = now
-        model.settle_angle_start = a
-        model.settle_angle_target = target
-        model.settle_motion_start = 1.0
+        model.settle_angle_start = current_angle
+        model.settle_motion_start = v0 # Storing velocity in motion_start slot (or add new field?)
+        # Reuse settle_motion_start as v0 for decay calc
+
 
     running = True
     try:
@@ -437,12 +532,129 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                     cached_overlay = None
                     start_prompt_fadein()
 
+            # --- SCREENSHOT AUTOMATION INPUT ---
+            if screenshot_mode and not pressed:
+                # Trigger press after 1.5s if needed for state transition
+                if screenshot_mode in ("thinking", "result"):
+                    if model.state == AppState.PROMPT and (now - now0) > 1.5:
+                        pressed = True
+                        note_activity()
+
             # --- INTERRUPT RULE ---
             # If we're showing an outcome or fading it out, a press immediately starts thinking again.
             if pressed and model.state in (AppState.RESULT, AppState.FADEOUT):
                 model.outcome_text = ""
                 start_thinking_fadein()
                 pressed = False  # consume it so we don't also trigger other transitions below
+            
+            # --- SUBTITLE CYCLING ---
+            # If we are in prompt state and have multiple subtitles, cycle them
+            if model.state in (AppState.PROMPT, AppState.FADEIN_PROMPT):
+                cycle_s = max(2.0, float(CONFIG.behavior.subtitle_cycle_seconds))
+                
+                # Check for cycle trigger
+                if not model.is_fading_subtitle and (now - model.subtitle_last_cycle_at) >= cycle_s:
+                    subs = CONFIG.text.waiting_screen.subtitles
+                    if subs and len(subs) > 1:
+                        # Pick different one
+                        new_sub = _render_template(_pick_subtitle(subs))
+                        tries = 0
+                        while new_sub == model.waiting_subtitle and tries < 5:
+                            new_sub = _render_template(_pick_subtitle(subs))
+                            tries += 1
+                        
+                        if new_sub != model.waiting_subtitle:
+                            model.next_subtitle = new_sub
+                            model.is_fading_subtitle = True
+                            model.subtitle_fade_start_at = now
+                
+                # Handle fade processing
+                if model.is_fading_subtitle:
+                     fade_dur = max(0.1, float(CONFIG.behavior.subtitle_fade_seconds))
+                     ratio = (now - model.subtitle_fade_start_at) / fade_dur
+                     
+                     if ratio >= 1.0:
+                         # transition complete
+                         model.waiting_subtitle = model.next_subtitle
+                         model.next_subtitle = ""
+                         model.is_fading_subtitle = False
+                         model.subtitle_last_cycle_at = now
+                     else:
+                         # mid-fade, we handle drawing alpha below
+                         pass
+
+            # --- IDLE SEQUENCE LOGIC ---
+            # 0: IDLE_STATIC (Wait cycle_s)
+            
+            if model.state in (AppState.PROMPT, AppState.FADEIN_PROMPT):
+                # User Request: "fade to black on idle should happen every 30 seconds"
+                cycle_s = max(10.0, float(getattr(CONFIG.behavior, "title_cycle_seconds", 30.0)))
+                
+                # Check for transition
+                if not model.is_fading_idle:
+                    elapsed = now - model.idle_last_cycle_at
+                    
+                    if model.idle_phase == 0: # Static Idle
+                        if elapsed >= cycle_s:
+                            model.next_idle_phase = 1 # Start Fade Out
+                            model.idle_fade_start_at = now
+                            model.is_fading_idle = True
+                            
+                    elif model.idle_phase == 4: # Logo Hold
+                        if elapsed >= 5.0:
+                             model.next_idle_phase = 5 # Fade Out Logo
+                             model.idle_fade_start_at = now
+                             model.is_fading_idle = True
+                             
+                    # Holds (Black)
+                    elif model.idle_phase in (2, 6):
+                        if elapsed >= 0.2:
+                            model.idle_phase += 1 # Advance to Fade In
+                            model.idle_last_cycle_at = now
+                            model.next_idle_phase = model.idle_phase # Just to set up fade
+                            model.idle_fade_start_at = now
+                            model.is_fading_idle = True # Start fade immediately (transition to fade state)
+
+                # Handle Fades
+                if model.is_fading_idle:
+                    # Generic 1.0s fade duration for transitions
+                    fade_dur = 1.0 
+                    
+                    # Phase 1, 3, 5, 7 are fade phases? 
+                    # Actually, let's use is_fading_idle to animate opacity, and switch state when done.
+                    
+                    # If we entered a FADE state (1, 3, 5, 7), we run the timer.
+                    # Or simpler:
+                    # Transitions:
+                    # 0 -> 1 (Fade Out Idle). Logic: Opacity = 1 - u. When done, go to 2.
+                    # 2 -> 3 (Fade In Logo). Logic: Opacity = u. When done, go to 4.
+                    # 4 -> 5 (Fade Out Logo). Logic: Opacity = 1 - u. When done, go to 6.
+                    # 6 -> 7 (Fade In Idle). Logic: Opacity = u. When done, go to 0.
+                    
+                    # Let's simplify state machine:
+                    # model.idle_phase represents the current ACTIVITY.
+                    # Transitions are handled by `is_fading_idle` flag? 
+                    # No, let's explicit phases handle it.
+                    
+                    p = model.next_idle_phase # The target state?
+                    # My logic above set next_idle_phase = 1 (Fade Out).
+                    
+                    dur = 1.0
+                    u = (now - model.idle_fade_start_at) / dur
+                    if u >= 1.0:
+                        # Fade Done
+                         curr = model.next_idle_phase
+                         model.is_fading_idle = False
+                         model.idle_last_cycle_at = now
+                         
+                         # Advance logic
+                         if curr == 1: model.idle_phase = 2 # Black 1
+                         elif curr == 3: model.idle_phase = 4 # Logo Hold
+                         elif curr == 5: model.idle_phase = 6 # Black 2
+                         elif curr == 7: model.idle_phase = 0 # Idle Static
+                         else: model.idle_phase = curr
+                    else:
+                        pass # rendering handles u
 
             # Transitions (normal)
             if model.state in (AppState.PROMPT, AppState.FADEIN_PROMPT) and pressed:
@@ -456,10 +668,13 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                 start_thinking_fadein()
 
             elif model.state == AppState.THINKING:
-                if (now - model.thinking_started_at) >= float(CONFIG.behavior.animation_seconds):
+                if (now - model.thinking_started_at) >= model.thinking_duration:
                     # Capture settle pose *before* switching to result
                     capture_settle(now)
-
+                    # Next: RESULT or FADEOUT?
+                    # Result screen logic
+                    model.state = AppState.RESULT
+                    model.result_started_at = now
                     outcome = choose_outcome(outcomes)
                     if model.last_outcome_text:
                         tries = 0
@@ -470,7 +685,12 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                     model.outcome_text = outcome.text
                     model.last_outcome_text = model.outcome_text
                     model.shown_count += 1
-                    append_interaction(CONFIG.paths.interactions_csv, model.shown_count, model.outcome_text)
+                    append_interaction(
+                        CONFIG.paths.interactions_csv, 
+                        model.shown_count, 
+                        model.outcome_text, 
+                        prompt=model.active_prompt_text
+                    )
 
                     model.state = AppState.RESULT
                     model.result_started_at = now
@@ -525,38 +745,230 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
             # Draw
             screen.fill(bg)
 
-            center = (screen.get_width() // 2, screen.get_height() // 2 - 30)
-            square_size = max(140, min(screen.get_width(), screen.get_height()) // 3)
+            # Responsive Scaling
+            s_w, s_h = screen.get_size()
+            scale = s_h / 720.0
+            
+            # Shared font sizes
+            title_font_sz = int(78 * scale)
+            prompt_font_sz = int(44 * scale)
+            
+            # Center offset scaled
+            center_y = int(s_h / 2 - (30 * scale))
+            center = (s_w // 2, center_y)
+            
+            # Sizing
+            square_size = int(min(s_w, s_h) * 0.20) # slightly smaller than before
 
-            angle, motion = _compute_square_pose(now, model)
-            _draw_square(screen, center, square_size, now, bg, accent, angle=angle, motion=motion)
+            # --- IDLE RENDER ---
+            # Phase 0: Title Text + Icon
+            # Phase 1: Logo Text Image + Icon
+            # Phase 2: Full Logo (Fullscreen, hides icon)
+            
+            # Helper to draw icon
+
+                 
+            # Calculate spin speed
+            base_speed = float(getattr(CONFIG.behavior, "spin_speed", 1.0)) * 0.5 # Slower
+            
+            # --- HELPER: Compute Angle ---
+            def _compute_square_pose(now_t, m):
+                 # Idle spin
+                 if m.state in (AppState.PROMPT, AppState.FADEIN_PROMPT):
+                      # Slow spin, constant direction? Or idle direction?
+                      # Let's use spin_direction for idle too? 
+                      # Or just constant +1 for idle? User said "spin a random direction... on each run" (Thinking).
+                      # Idle can stay constant slow positive.
+                      return (now_t * base_speed), 1.0
+                      
+                 elif m.state == AppState.THINKING:
+                      # fast spin with direction
+                      spin_speed = base_speed * 8.0
+                      return (now_t * spin_speed * m.spin_direction), 1.0
+                      
+                 elif m.state == AppState.RESULT:
+                      # Decay Logic ("Slow to a stop")
+                      # Formula: angle(t) = angle_start + (v0 / decay) * (1 - exp(-decay * t))
+                      
+                      decay_rate = 2.0 # Higher = stops faster
+                      settle_s = max(0.001, float(CONFIG.behavior.square_settle_seconds))
+                      
+                      elapsed = now_t - m.settle_started_at
+                      
+                      if elapsed <= 0:
+                          return (m.settle_angle_start, 1.0)
+                          
+                      # Velocity decay
+                      # v(t) = v0 * exp(-decay * t)
+                      # We want motion (0..1) to represent normalized speed?
+                      # Or just use result for angle.
+                      
+                      v0 = m.settle_motion_start # We stored v0 here
+                      
+                      # Angle
+                      # factor = (1 - exp(-decay * elapsed))
+                      factor = (1.0 - math.exp(-decay_rate * elapsed))
+                      angle_offset = (v0 / decay_rate) * factor
+                      angle = m.settle_angle_start + angle_offset
+                      
+                      # Motion (for pulsing icon)
+                      # v_current = v0 * exp(-decay * elapsed)
+                      # normalize motion: v_current / v0_abs
+                      current_v = v0 * math.exp(-decay_rate * elapsed)
+                      motion = abs(current_v) / (abs(v0) + 0.0001)
+                      
+                      # Clamp motion
+                      if motion < 0.001: motion = 0.0
+                      
+                      return (angle, motion)
+                      
+                 return 0.0, 0.0
+                 
+
+            
+            # We need to handle the Alpha Crossfade of whole screens for Idle phases.
+            # To do this cleanly, we can draw "Current Phase" and "Next Phase" and blend.
+            
+            # --- RENDER STRATEGY ---
+            
+            # Phases Logic:
+            # 0: IDLE_STATIC (Draw Icon + Text)
+            # 1: FADE_OUT_IDLE (Draw Icon+Text @ 1-u)
+            # 2: BLACK_HOLD_1 (Draw Black)
+            # 3: FADE_IN_LOGO (Draw Logo @ u)
+            # 4: LOGO_HOLD (Draw Logo)
+            # 5: FADE_OUT_LOGO (Draw Logo @ 1-u)
+            # 6: BLACK_HOLD_2 (Draw Black)
+            # 7: FADE_IN_IDLE (Draw Icon+Text @ u)
+            
+            # Helper to draw static Idle (Icon + Title)
+            def draw_idle_static(opacity=1.0):
+                 if opacity <= 0.01: return
+                 
+                 # Icon
+                 angle, motion = _compute_square_pose(now, model)
+                 # Apply alpha to icon?
+                 # If we can't easily alpha the icon, we just draw it logic:
+                 # Icon is visible in 0, 1, 7.
+                 # If opacity < 1 (fading), we might want to skip fading icon and just fade to black on top?
+                 # Transition to black uses a fade out.
+                 
+                 # Draw Icon
+                 if opacity > 0:
+                     _draw_spinning_icon(screen, center, square_size, now, icon_surf, angle, motion)
+                 
+                 # Draw Title
+                 # Static "Lunarcrats <name>"
+                 title_y = int(90 * scale)
+                 t_str = f"Lunarcrats {CONFIG.name}"
+                 col = text
+                 if opacity < 0.99:
+                      col = _blend(col, bg, 1.0 - opacity) # Fade text color to bg
+                 
+                 _draw_centered_text_autofit(screen, t_str, title_y, color=col, max_font_size=title_font_sz)
+
+            # Helper to draw Full Logo
+            def draw_full_logo(opacity=1.0):
+                 if opacity <= 0.01: return
+                 if logo_full_surf:
+                     r = logo_full_surf.get_rect(center=(s_w//2, s_h//2))
+                     if opacity < 0.99:
+                          tmp = logo_full_surf.copy()
+                          tmp.set_alpha(int(255 * opacity))
+                          screen.blit(tmp, r)
+                     else:
+                          screen.blit(logo_full_surf, r)
+
+            # Execution
+            # Only run this idle visual logic if in PROMPT state
+            if model.state in (AppState.PROMPT, AppState.FADEIN_PROMPT):
+                
+                # Default opacity vars
+                u = 0.0
+                if model.is_fading_idle:
+                    dur = 1.0 # fixed consistency
+                    u = min(1.0, max(0.0, (now - model.idle_fade_start_at) / dur))
+                
+                phase = model.idle_phase
+                if model.is_fading_idle:
+                     nxt = model.next_idle_phase
+                     # Transitioning...
+                     if nxt == 1: # Fading Out Idle
+                          draw_idle_static(1.0 - u)
+                     elif nxt == 3: # Fading In Logo
+                          draw_full_logo(u)
+                     elif nxt == 5: # Fading Out Logo
+                          draw_full_logo(1.0 - u)
+                     elif nxt == 7: # Fading In Idle
+                          draw_idle_static(u)
+                else:
+                     # Holding
+                     if phase == 0: draw_idle_static(1.0)
+                     elif phase == 4: draw_full_logo(1.0)
+                     # 2 and 6 are black, draw nothing (screen filled bg)
+            else:
+                 # Not idle (Thinking/Result) - Draw Icon Always
+                 angle, motion = _compute_square_pose(now, model)
+                 _draw_spinning_icon(screen, center, square_size, now, icon_surf, angle, motion)
+
 
             if model.state in (AppState.PROMPT, AppState.FADEIN_PROMPT):
-                # Draw Logo if exists
-                if logo_surf:
-                    # Center logo
-                    l_rect = logo_surf.get_rect(center=(screen.get_width()//2, screen.get_height()//2))
-                    screen.blit(logo_surf, l_rect)
+                prompt_y = int(155 * scale)
 
-                title = _render_template(CONFIG.text.waiting_screen.title)
-                subtitle = model.waiting_subtitle or _render_template("Press button")
-                prompt_line = CONFIG.text.prompts[model.prompt_index] if CONFIG.text.prompts else f"MAGIC {CONFIG.name}"
-                prompt_line = _render_template(prompt_line)
+                # Subtitles and Prompts
+                # Should we hide prompts during Logo?
+                # Yes, if phase is not 0 (or fading to/from 0).
+                # Actually user said "subtitle and prompts should be what cycle occasionally".
+                # Implies they are independent?
+                # "When fading to the black full logo... fade to black"
+                # This implies EVERYTHING fades to black.
+                # So we should only draw prompts/subtitles if phase == 0 (Idle Static).
+                # Or fading 1/7.
+                
+                show_prompts = False
+                prompt_alpha = 1.0
+                
+                if model.idle_phase == 0 and not model.is_fading_idle:
+                    show_prompts = True
+                elif model.is_fading_idle:
+                    if model.next_idle_phase == 1: # Fading Out
+                         show_prompts = True
+                         prompt_alpha = 1.0 - u
+                    elif model.next_idle_phase == 7: # Fading In
+                         show_prompts = True
+                         prompt_alpha = u
+                
+                if show_prompts:
+                    subtitle = model.waiting_subtitle or _render_template("Press button")
+                    prompt_line = model.active_prompt_text or _render_template(f"MAGIC {CONFIG.name}")
+                    if CONFIG.text.prompts and model.prompt_index < len(CONFIG.text.prompts):
+                         prompt_line = _render_template(CONFIG.text.prompts[model.prompt_index])
 
-                # Adjusted heights to make room for logo if present? 
-                # For now just draw text on top or existing positions.
-                _draw_centered_text_autofit(screen, title, 90, color=text, max_font_size=78)
-                _draw_centered_text_autofit(screen, prompt_line, 155, color=_blend(text, accent, 0.25), max_font_size=44)
-                _draw_centered_text_autofit(
-                    screen,
-                    subtitle,
-                    screen.get_height() - 140,
-                    color=text,
-                    max_width_ratio=0.92,
-                    max_font_size=78,   # matches your font_big vibe
-                    min_font_size=26,
-                    bold=False,
-                )
+                    col_prompt = _blend(text, accent, 0.25)
+                    if prompt_alpha < 0.99:
+                         col_prompt = _blend(col_prompt, bg, 1.0 - prompt_alpha)
+                         
+                    _draw_centered_text_autofit(screen, prompt_line, prompt_y, color=col_prompt, max_font_size=prompt_font_sz)
+                    
+                    # Subtitle Breathing...
+                    sub_breath = 0.5 + 0.5 * math.sin(now * 2.5) 
+                    breath_alpha = 60 + int(195 * sub_breath)
+                    if prompt_alpha < 0.99:
+                         breath_alpha = int(breath_alpha * prompt_alpha)
+                         
+                    final_color = _blend(text, bg, 1.0 - (breath_alpha/255.0))
+                     
+                    # Use Multiline for subtitle
+                    _draw_centered_text_multiline(
+                            screen,
+                            subtitle,
+                            s_h - int(140 * scale),
+                            color=final_color,
+                            max_width_ratio=0.85,
+                            font_size=title_font_sz, # Use larger font but wrap
+                        )
+
+
 
                 if model.state == AppState.FADEIN_PROMPT:
                     dur = max(0.001, float(CONFIG.behavior.prompt_fade_seconds))
@@ -567,16 +979,24 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                         fade_overlay.apply(screen, bg, alpha)
 
             elif model.state in (AppState.THINKING, AppState.FADEIN_THINKING):
+                # Fix Overlap: Move title up or smaller
+                think_y = int(60 * scale) # higher than idle title (90)
+                
                 title = _render_template(CONFIG.text.thinking_screen.title)
+                # Thinking Title
+                _draw_centered_text_autofit(screen, title, think_y, color=text, max_font_size=int(title_font_sz * 0.8))
+
                 subtitle = model.thinking_subtitle or _render_template("...")
-                _draw_centered_text_autofit(screen, title, 90, color=text, max_font_size=78)
+                
+                # FIXED OVERLAP: Removed duplicate draw
+                
                 _draw_centered_text_autofit(
                     screen,
                     subtitle,
-                    screen.get_height() - 140,
+                    s_h - int(140 * scale),
                     color=muted,
                     max_width_ratio=0.92,
-                    max_font_size=44,   # matches your font_med vibe
+                    max_font_size=prompt_font_sz,   # matches your font_med vibe
                     min_font_size=22,
                     bold=False,
                 )
@@ -622,9 +1042,8 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                 screen.blit(cached_overlay, cached_overlay_pos)
 
                 footer = _render_template(CONFIG.text.result_screen.footer)
-                footer = _render_template(CONFIG.text.result_screen.footer)
-                _draw_centered_text_autofit(screen, f"Answer #{model.shown_count}", 40, color=muted, max_font_size=28)
-                _draw_centered_text_autofit(screen, footer, screen.get_height() - 60, color=muted, max_font_size=28)
+                _draw_centered_text_autofit(screen, f"Answer #{model.shown_count}", int(40 * scale), color=muted, max_font_size=int(28 * scale))
+                _draw_centered_text_autofit(screen, footer, s_h - int(60 * scale), color=muted, max_font_size=int(28 * scale))
 
             if debug:
                 mode_hint = "Keyboard" if disable_gpio or button is None or not button.is_available() else "GPIO+Keyboard"
@@ -643,6 +1062,34 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                     y += 18
 
             pygame.display.flip()
+
+            # --- SCREENSHOT AUTOMATION CAPTURE ---
+            if screenshot_mode:
+                should_snap = False
+                
+                if screenshot_mode == "idle":
+                     # Wait 3s for settling/cycling
+                     if (now - now0) > 3.0: should_snap = True
+
+                elif screenshot_mode == "thinking":
+                     if model.state == AppState.THINKING:
+                         dur = model.thinking_duration
+                         # Snap near end
+                         if (now - model.thinking_started_at) > (dur * 0.8):
+                             should_snap = True
+                
+                elif screenshot_mode == "result":
+                     if model.state == AppState.RESULT:
+                         # Wait for fade in + settle
+                         fade = float(CONFIG.behavior.result_fade_seconds)
+                         if (now - model.result_started_at) > (fade + 2.0):
+                             should_snap = True
+
+                if should_snap:
+                    p = CONFIG.project_root / f"screenshot_{screenshot_mode}.png"
+                    pygame.image.save(screen, str(p))
+                    print(f"Screenshot saved to {p}")
+                    running = False
 
     finally:
         lamp.close()

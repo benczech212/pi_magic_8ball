@@ -45,7 +45,8 @@ class GPIOConfig:
 
 @dataclass(frozen=True)
 class BehaviorConfig:
-    animation_seconds: float = 5.0
+    thinking_min_seconds: float = 2.0
+    thinking_max_seconds: float = 5.0
     idle_return_seconds: float = 20.0
     result_fade_seconds: float = 0.8
     result_fadeout_seconds: float = 3.5
@@ -55,6 +56,17 @@ class BehaviorConfig:
 
     # NEW: global fade enable/disable
     fades_enabled: bool = True
+    
+    # NEW: subtitle cycling
+    subtitle_cycle_seconds: float = 10.0
+    subtitle_fade_seconds: float = 1.0
+
+    # NEW: title cycling
+    title_cycle_seconds: float = 10.0
+    title_fade_seconds: float = 1.0
+    
+    # NEW: spin speed
+    spin_speed: float = 2.2
 
 
 @dataclass(frozen=True)
@@ -263,7 +275,8 @@ def load_config(config_path: Path | None = None) -> AppConfig:
     )
 
     behavior = BehaviorConfig(
-        animation_seconds=_deep_get(data, "behavior.animation_seconds", 5.0),
+        thinking_min_seconds=_deep_get(data, "behavior.thinking_min_seconds", 2.0),
+        thinking_max_seconds=_deep_get(data, "behavior.thinking_max_seconds", 5.0),
         idle_return_seconds=_deep_get(data, "behavior.idle_return_seconds", 20.0),
         result_fade_seconds=_deep_get(data, "behavior.result_fade_seconds", 0.8),
         result_fadeout_seconds=_deep_get(data, "behavior.result_fadeout_seconds", 3.5),
@@ -271,6 +284,11 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         thinking_fade_seconds=_deep_get(data, "behavior.thinking_fade_seconds", 0.6),
         square_settle_seconds=_deep_get(data, "behavior.square_settle_seconds", 1.0),
         fades_enabled=bool(_deep_get(data, "behavior.fades_enabled", True)),
+        subtitle_cycle_seconds=_deep_get(data, "behavior.subtitle_cycle_seconds", 10.0),
+        subtitle_fade_seconds=_deep_get(data, "behavior.subtitle_fade_seconds", 1.0),
+        title_cycle_seconds=_deep_get(data, "behavior.title_cycle_seconds", 10.0),
+        title_fade_seconds=_deep_get(data, "behavior.title_fade_seconds", 1.0),
+        spin_speed=_deep_get(data, "behavior.spin_speed", 2.2),
     )
 
     # outcomes_csv is now OPTIONAL (fallback only)
@@ -368,13 +386,19 @@ def save_config(config: AppConfig, path: Optional[Path] = None):
         },
         "behavior": {
              "fades_enabled": config.behavior.fades_enabled,
-             "animation_seconds": config.behavior.animation_seconds,
+             "thinking_min_seconds": config.behavior.thinking_min_seconds,
+             "thinking_max_seconds": config.behavior.thinking_max_seconds,
              "idle_return_seconds": config.behavior.idle_return_seconds,
              "result_fade_seconds": config.behavior.result_fade_seconds,
              "result_fadeout_seconds": config.behavior.result_fadeout_seconds,
              "prompt_fade_seconds": config.behavior.prompt_fade_seconds,
              "thinking_fade_seconds": config.behavior.thinking_fade_seconds,
              "square_settle_seconds": config.behavior.square_settle_seconds,
+             "subtitle_cycle_seconds": config.behavior.subtitle_cycle_seconds,
+             "subtitle_fade_seconds": config.behavior.subtitle_fade_seconds,
+             "title_cycle_seconds": config.behavior.title_cycle_seconds,
+             "title_fade_seconds": config.behavior.title_fade_seconds,
+             "spin_speed": config.behavior.spin_speed,
         },
         "paths": {
             "outcomes_csv": str(config.paths.outcomes_csv.name) if config.paths.outcomes_csv else None,

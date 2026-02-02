@@ -31,6 +31,7 @@ def parse_args():
     p.add_argument("--windowed", action="store_true", help="Force windowed mode.")
     p.add_argument("--configure", action="store_true", help="Launch configuration editor.")
     p.add_argument("--debug", action="store_true", help="Enable debug mode and logging.")
+    p.add_argument("--screenshot", choices=["idle", "thinking", "result"], help="Auto-capture screenshot of specific state and exit.")
     return p.parse_args()
 
 
@@ -53,7 +54,8 @@ if __name__ == "__main__":
         run_app(
             disable_gpio=args.no_gpio,
             fullscreen=True if args.fullscreen else (False if args.windowed else None),
-            debug=args.debug
+            debug=args.debug,
+            screenshot_mode=args.screenshot
         )
     except Exception as e:
         print(f"\nApp crashed! Details logged to: {crash_log}")

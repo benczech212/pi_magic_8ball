@@ -9,6 +9,7 @@ class Interaction:
     timestamp_utc_iso: str
     count: int
     outcome: str
+    prompt: str = ""
 
 
 def ensure_log_file(path: Path) -> None:
@@ -16,16 +17,26 @@ def ensure_log_file(path: Path) -> None:
     if not path.exists():
         with path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["timestamp_utc", "count", "outcome"])
+            writer.writerow(["timestamp_utc", "count", "outcome", "prompt"])
 
 
-def append_interaction(path: Path, count: int, outcome: str) -> Interaction:
+def append_interaction(path: Path, count: int, outcome: str, prompt: str = "") -> Interaction:
     ensure_log_file(path)
     ts = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    interaction = Interaction(timestamp_utc_iso=ts, count=int(count), outcome=outcome.strip())
+    interaction = Interaction(
+        timestamp_utc_iso=ts, 
+        count=int(count), 
+        outcome=outcome.strip(),
+        prompt=prompt.strip()
+    )
 
     with path.open("a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow([interaction.timestamp_utc_iso, interaction.count, interaction.outcome])
+        writer.writerow([
+            interaction.timestamp_utc_iso, 
+            interaction.count, 
+            interaction.outcome,
+            interaction.prompt
+        ])
 
     return interaction

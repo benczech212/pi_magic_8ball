@@ -31,6 +31,7 @@ RESOLUTIONS = [
     "800x600",
     "800x480",
     "720x480",
+    "720x400",
     "640x480"
 ]
 
@@ -58,8 +59,13 @@ class ConfigEditor:
         self.var_logo_width = tk.IntVar(value=self.config.theme.logo_width or 0)
         self.var_font_path = tk.StringVar(value=self.config.theme.font_path or "")
         
-        self.var_anim_sec = tk.DoubleVar(value=self.config.behavior.animation_seconds)
+        self.var_thinking_min = tk.DoubleVar(value=getattr(self.config.behavior, "thinking_min_seconds", 2.0))
+        self.var_thinking_max = tk.DoubleVar(value=getattr(self.config.behavior, "thinking_max_seconds", 5.0))
         self.var_settle_sec = tk.DoubleVar(value=self.config.behavior.square_settle_seconds)
+        self.var_sub_cycle_sec = tk.DoubleVar(value=getattr(self.config.behavior, "subtitle_cycle_seconds", 10.0))
+        self.var_sub_fade_sec = tk.DoubleVar(value=getattr(self.config.behavior, "subtitle_fade_seconds", 1.0))
+        self.var_title_cycle_sec = tk.DoubleVar(value=getattr(self.config.behavior, "title_cycle_seconds", 10.0))
+        self.var_title_fade_sec = tk.DoubleVar(value=getattr(self.config.behavior, "title_fade_seconds", 1.0))
         
         # Hardware vars
         self.var_btn_pin = tk.IntVar(value=self.config.gpio.button_pin)
@@ -203,11 +209,26 @@ class ConfigEditor:
         ttk.Label(inner, text="Fullscreen Mode:").grid(row=2, column=0, sticky="w", pady=5)
         ttk.Checkbutton(inner, variable=self.var_fullscreen).grid(row=2, column=1, sticky="w", pady=5)
         
-        ttk.Label(inner, text="Animation Duration (s):").grid(row=3, column=0, sticky="w", pady=5)
-        ttk.Entry(inner, textvariable=self.var_anim_sec, width=10).grid(row=3, column=1, sticky="w", pady=5)
+        ttk.Label(inner, text="Thinking Min (s):").grid(row=3, column=0, sticky="w", pady=5)
+        ttk.Entry(inner, textvariable=self.var_thinking_min, width=8).grid(row=3, column=1, sticky="w", pady=5)
+
+        ttk.Label(inner, text="Thinking Max (s):").grid(row=3, column=2, sticky="w", pady=5, padx=10)
+        ttk.Entry(inner, textvariable=self.var_thinking_max, width=8).grid(row=3, column=3, sticky="w", pady=5)
 
         ttk.Label(inner, text="Settle Duration (s):").grid(row=4, column=0, sticky="w", pady=5)
         ttk.Entry(inner, textvariable=self.var_settle_sec, width=10).grid(row=4, column=1, sticky="w", pady=5)
+
+        ttk.Label(inner, text="Subtitle Cycle (s):").grid(row=5, column=0, sticky="w", pady=5)
+        ttk.Entry(inner, textvariable=self.var_sub_cycle_sec, width=10).grid(row=5, column=1, sticky="w", pady=5)
+
+        ttk.Label(inner, text="Subtitle Fade (s):").grid(row=6, column=0, sticky="w", pady=5)
+        ttk.Entry(inner, textvariable=self.var_sub_fade_sec, width=10).grid(row=6, column=1, sticky="w", pady=5)
+
+        ttk.Label(inner, text="Title Cycle (s):").grid(row=7, column=0, sticky="w", pady=5)
+        ttk.Entry(inner, textvariable=self.var_title_cycle_sec, width=10).grid(row=7, column=1, sticky="w", pady=5)
+
+        ttk.Label(inner, text="Title Fade (s):").grid(row=8, column=0, sticky="w", pady=5)
+        ttk.Entry(inner, textvariable=self.var_title_fade_sec, width=10).grid(row=8, column=1, sticky="w", pady=5)
 
     def _build_theme_tab(self):
         tab = ttk.Frame(self.notebook)
@@ -478,6 +499,30 @@ class ConfigEditor:
         ttk.Label(lf_pins, text="Button Pin (BCM):").grid(row=0, column=0, sticky="w")
         ttk.Entry(lf_pins, textvariable=self.var_btn_pin, width=5).grid(row=0, column=1, sticky="w", padx=10)
         
+        # Add a new LabelFrame for Display Settings
+        lf_display = ttk.LabelFrame(inner, text="Display Settings", padding=10)
+        lf_display.pack(fill="x", pady=10)
+        
+        r = 0
+        ttk.Label(lf_display, text="Title Fade (s):").grid(row=r, column=0, sticky="e", padx=5, pady=2)
+        self.ent_title_fade = ttk.Entry(lf_display, textvariable=self.var_title_fade, width=8)
+        self.ent_title_fade.grid(row=r, column=1, sticky="we", padx=5, pady=2)
+
+        r += 1
+        ttk.Label(lf_display, text="Spin Speed (rad/s):").grid(row=r, column=0, sticky="e", padx=5, pady=2)
+        self.ent_spin_speed = ttk.Entry(lf_display, textvariable=self.var_spin_speed, width=8)
+        self.ent_spin_speed.grid(row=r, column=1, sticky="we", padx=5, pady=2)
+        
+        r += 1
+        ttk.Label(lf_display, text="Subtitle Cycle (s):").grid(row=r, column=0, sticky="e", padx=5, pady=2)
+        self.ent_sub_cycle = ttk.Entry(lf_display, textvariable=self.var_sub_cycle, width=8)
+        self.ent_sub_cycle.grid(row=r, column=1, sticky="we", padx=5, pady=2)
+
+        r += 1
+        ttk.Label(lf_display, text="Subtitle Fade (s):").grid(row=r, column=0, sticky="e", padx=5, pady=2)
+        self.ent_sub_fade = ttk.Entry(lf_display, textvariable=self.var_sub_fade, width=8)
+        self.ent_sub_fade.grid(row=r, column=1, sticky="we", padx=5, pady=2)
+        
         ttk.Label(lf_pins, text="Lamp Pin (BCM):").grid(row=1, column=0, sticky="w")
         ttk.Entry(lf_pins, textvariable=self.var_lamp_pin, width=5).grid(row=1, column=1, sticky="w", padx=10)
         
@@ -676,14 +721,20 @@ class ConfigEditor:
         )
         
         behavior = BehaviorConfig(
-            animation_seconds=self.var_anim_sec.get(),
+            thinking_min_seconds=self.var_thinking_min.get(),
+            thinking_max_seconds=self.var_thinking_max.get(),
+            spin_speed=self.var_spin_speed.get(),
             idle_return_seconds=self.config.behavior.idle_return_seconds,
             result_fade_seconds=self.config.behavior.result_fade_seconds,
             result_fadeout_seconds=self.config.behavior.result_fadeout_seconds,
             prompt_fade_seconds=self.config.behavior.prompt_fade_seconds,
             thinking_fade_seconds=self.config.behavior.thinking_fade_seconds,
             square_settle_seconds=self.var_settle_sec.get(),
-            fades_enabled=self.config.behavior.fades_enabled
+            fades_enabled=self.config.behavior.fades_enabled,
+            subtitle_cycle_seconds=self.var_sub_cycle_sec.get(),
+            subtitle_fade_seconds=self.var_sub_fade_sec.get(),
+            title_cycle_seconds=self.var_title_cycle_sec.get(),
+            title_fade_seconds=self.var_title_fade_sec.get()
         )
 
         app_cfg = AppConfig(
