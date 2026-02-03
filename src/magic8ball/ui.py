@@ -365,7 +365,7 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
     pygame.display.set_caption("Magic 7-Ball")
 
     use_fullscreen = CONFIG.ui.fullscreen if fullscreen is None else fullscreen
-    flags = pygame.FULLSCREEN if use_fullscreen else 0
+    flags = (pygame.FULLSCREEN | pygame.SCALED) if use_fullscreen else 0
 
     screen = pygame.display.set_mode((CONFIG.ui.window_width, CONFIG.ui.window_height), flags)
     clock = pygame.time.Clock()
@@ -375,14 +375,18 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
     font_small = pygame.font.SysFont(None, 28)
 
     outcomes = load_outcomes(CONFIG.paths.outcomes_csv)
-
+    
     button = None
     if not disable_gpio and CONFIG.gpio.enabled:
-        button = ArcadeButton(
-        gpio_pin=CONFIG.gpio.button_pin,
-        debounce_seconds=CONFIG.gpio.debounce_seconds,
-        pull_up=CONFIG.gpio.button_pull_up
-    )
+        try:
+            button = ArcadeButton(
+                gpio_pin=CONFIG.gpio.button_pin,
+                debounce_seconds=CONFIG.gpio.debounce_seconds,
+                pull_up=CONFIG.gpio.button_pull_up
+            )
+        except Exception as e:
+            print(f"GPIO Init Failed (PC Mode?): {e}")
+            button = None
 
     # Load Assets
     def _load_asset(name, target_width=None):
@@ -405,12 +409,14 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
              print(f"Failed to load {name}: {e}")
              return None
 
-    icon_surf = _load_asset("Logo Icon.png", target_width=CONFIG.ui.window_height // 2) # approx size
+    # Adjusted sizing for 720x400 screens based on feedback
+    # Icon: previously height//2, now proportional to square_size*2? which is ~40%
+    icon_surf = _load_asset("Logo Icon.png", target_width=int(CONFIG.ui.window_height * 0.40))
     if icon_surf and getattr(CONFIG.theme, "flip_logo", False):
          icon_surf = pygame.transform.flip(icon_surf, True, False)
 
     logo_text_surf = _load_asset("Logo Text.png", target_width=int(CONFIG.ui.window_width * 0.8))
-    logo_full_surf = _load_asset("LUNARCRATS-LOGO.png", target_width=int(CONFIG.ui.window_width * 0.6))
+    logo_full_surf = _load_asset("LUNARCRATS-LOGO.png", target_width=int(CONFIG.ui.window_width * 0.50))
 
     # Keep original logo logic if configured explicitly, otherwise use new identity
     # User said "Use all three" - implying new identity replaces old generic logo logic.

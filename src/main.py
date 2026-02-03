@@ -31,7 +31,7 @@ def parse_args():
     p.add_argument("--windowed", action="store_true", help="Force windowed mode.")
     p.add_argument("--configure", action="store_true", help="Launch configuration editor.")
     p.add_argument("--debug", action="store_true", help="Enable debug mode and logging.")
-    p.add_argument("--screenshot", choices=["idle", "thinking", "result"], help="Auto-capture screenshot of specific state and exit.")
+    p.add_argument("--screenshot", choices=["idle", "thinking", "result", "config_all"], help="Auto-capture screenshot of specific state and exit.")
     return p.parse_args()
 
 
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         if args.configure:
             try:
                 from .magic8ball import editor
-                editor.main()
+                editor.main(screenshot_mode=args.screenshot)
             except ImportError as e:
                 print(f"Error launching editor: {e}")
                 print("Ensure python3-tk is installed: sudo apt install python3-tk")

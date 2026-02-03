@@ -16,6 +16,13 @@ try:
 except ImportError:
     HAS_PIL = False
 
+try:
+    import pyautogui
+    HAS_PYAUTOGUI = True
+except Exception:
+    # Catching generic Exception because pyautogui import can throw Xlib errors if display is missing
+    HAS_PYAUTOGUI = False
+
 from .config import (
     CONFIG, save_config, AppConfig, ThemeConfig, UIConfig, BehaviorConfig, 
     TextConfig, OutcomeConfig, WaitingScreenText, ThinkingScreenText, ResultScreenText
@@ -36,8 +43,9 @@ RESOLUTIONS = [
 ]
 
 class ConfigEditor:
-    def __init__(self, root):
+    def __init__(self, root, auto_screenshot_mode=None):
         self.root = root
+        self.auto_screenshot_mode = auto_screenshot_mode
         self.root.title("Magic 8-Ball Configuration")
         self.root.geometry("900x700")
 
@@ -67,6 +75,7 @@ class ConfigEditor:
         self.var_sub_fade_sec = tk.DoubleVar(value=getattr(self.config.behavior, "subtitle_fade_seconds", 1.0))
         self.var_title_cycle_sec = tk.DoubleVar(value=getattr(self.config.behavior, "title_cycle_seconds", 10.0))
         self.var_title_fade_sec = tk.DoubleVar(value=getattr(self.config.behavior, "title_fade_seconds", 1.0))
+        self.var_spin_speed = tk.DoubleVar(value=getattr(self.config.behavior, "spin_speed", 2.2))
         
         # Hardware vars
         self.var_btn_pin = tk.IntVar(value=self.config.gpio.button_pin)
@@ -106,11 +115,61 @@ class ConfigEditor:
 
         # Start hardware loop
         self._update_hardware_loop()
+        
+        # Auto Screenshot
+        if self.auto_screenshot_mode:
+            self.root.after(2000, self._auto_screenshot_and_exit) # Wait 2s for UI to settle
+
+    def _auto_screenshot_and_exit(self):
+        if not HAS_PYAUTOGUI:
+            print("Error: pyautogui not installed, cannot take screenshot.")
+            self.root.destroy()
+            return
+            
+        try:
+            mode = self.auto_screenshot_mode
+            
+            # Helper to snap
+            def snap(name_suffix):
+                fname = f"screenshot_config_{name_suffix}.png"
+                p = self.config.project_root / fname
+                pyautogui.screenshot(str(p))
+                print(f"Screenshot saved to {p}")
+
+            if mode == "config_all":
+                # Cycle through all tabs
+                tabs = self.notebook.tabs()
+                for i, tab_id in enumerate(tabs):
+                    # Select tab
+                    self.notebook.select(tab_id)
+                    # Force update
+                    self.root.update()
+                    # Wait for render (tkinter is usually immediate after update, but safety)
+                    time.sleep(0.5)
+                    
+                    # Tab name or index
+                    # tab_text = self.notebook.tab(tab_id, "text") # Might have spaces/chars
+                    snap(f"tab_{i}")
+                    
+            else:
+                 # Default single shot (legacy/idle mode)
+                 snap("main")
+            
+        except Exception as e:
+            print(f"Screenshot failed: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            self.root.destroy()
 
     def _init_hardware(self):
         # Clean up old
-        if hasattr(self, 'lamp'): self.lamp.close()
-        # if hasattr(self, 'button'): self.button.close() # ArcadeButton doesn't strict close but good practice if it did
+        if hasattr(self, 'lamp'): 
+            try: self.lamp.close()
+            except: pass
+        if hasattr(self, 'button'):
+            # ArcadeButton doesn't strict close but good practice if it did
+            pass 
 
         try:
             self.lamp = ButtonLamp(
@@ -128,7 +187,10 @@ class ConfigEditor:
                 pull_up=(self.var_pull.get() == "Pull Up")
             )
         except Exception as e:
-            print(f"Hardware init failed (likely safe on PC): {e}")
+            print(f"Hardware init failed (Running on PC?): {e}")
+            # Ensure attributes exist to avoid crashes later if referenced
+            if not hasattr(self, 'lamp'): self.lamp = None
+            if not hasattr(self, 'button'): self.button = None
 
     def launch(self, args=[]):
         cmd = [sys.executable, "-m", "src.main"] + args
@@ -139,15 +201,16 @@ class ConfigEditor:
             messagebox.showerror("Error", f"Failed to launch: {e}")
 
     def __del__(self):
-        if hasattr(self, 'lamp'):
-            self.lamp.close()
+        if hasattr(self, 'lamp') and self.lamp:
+            try: self.lamp.close()
+            except: pass
 
     def _update_hardware_loop(self):
         now = time.monotonic()
-        if hasattr(self, 'lamp'):
+        if hasattr(self, 'lamp') and self.lamp:
             self.lamp.update(now)
         
-        if hasattr(self, 'button'):
+        if hasattr(self, 'button') and self.button:
             is_pressed = False
             if self.button.poll_pressed():
                 is_pressed = True
@@ -509,7 +572,7 @@ class ConfigEditor:
         
         r = 0
         ttk.Label(lf_display, text="Title Fade (s):").grid(row=r, column=0, sticky="e", padx=5, pady=2)
-        self.ent_title_fade = ttk.Entry(lf_display, textvariable=self.var_title_fade, width=8)
+        self.ent_title_fade = ttk.Entry(lf_display, textvariable=self.var_title_fade_sec, width=8)
         self.ent_title_fade.grid(row=r, column=1, sticky="we", padx=5, pady=2)
 
         r += 1
@@ -519,12 +582,12 @@ class ConfigEditor:
         
         r += 1
         ttk.Label(lf_display, text="Subtitle Cycle (s):").grid(row=r, column=0, sticky="e", padx=5, pady=2)
-        self.ent_sub_cycle = ttk.Entry(lf_display, textvariable=self.var_sub_cycle, width=8)
+        self.ent_sub_cycle = ttk.Entry(lf_display, textvariable=self.var_sub_cycle_sec, width=8)
         self.ent_sub_cycle.grid(row=r, column=1, sticky="we", padx=5, pady=2)
 
         r += 1
         ttk.Label(lf_display, text="Subtitle Fade (s):").grid(row=r, column=0, sticky="e", padx=5, pady=2)
-        self.ent_sub_fade = ttk.Entry(lf_display, textvariable=self.var_sub_fade, width=8)
+        self.ent_sub_fade = ttk.Entry(lf_display, textvariable=self.var_sub_fade_sec, width=8)
         self.ent_sub_fade.grid(row=r, column=1, sticky="we", padx=5, pady=2)
         
         ttk.Label(lf_pins, text="Lamp Pin (BCM):").grid(row=1, column=0, sticky="w")
@@ -542,7 +605,7 @@ class ConfigEditor:
         lf_lamp.pack(fill="x", pady=10)
         
         def set_lamp(mode):
-            if hasattr(self, 'lamp'): self.lamp.set_mode(mode)
+            if hasattr(self, 'lamp') and self.lamp: self.lamp.set_mode(mode)
 
         ttk.Button(lf_lamp, text="OFF", command=lambda: set_lamp(LampMode.OFF)).pack(side="left", padx=5)
         ttk.Button(lf_lamp, text="BREATHE", command=lambda: set_lamp(LampMode.IDLE)).pack(side="left", padx=5)
@@ -653,6 +716,7 @@ class ConfigEditor:
         ttk.Button(f, text="Launch Fullscreen (Normal)", command=lambda: self.launch([])).pack(fill="x", pady=5)
         ttk.Button(f, text="Launch Windowed", command=lambda: self.launch(["--windowed"])).pack(fill="x", pady=5)
         ttk.Button(f, text="Launch Debug", command=lambda: self.launch(["--debug", "--windowed"])).pack(fill="x", pady=5)
+        ttk.Button(f, text="Launch (No GPIO/PC Mode)", command=lambda: self.launch(["--no-gpio", "--windowed"])).pack(fill="x", pady=5)
 
     def save(self):
         # 1. Resolution
@@ -762,7 +826,7 @@ class ConfigEditor:
             messagebox.showerror("Error", str(e))
 
 
-def main():
+def main(screenshot_mode=None):
     root = tk.Tk()
     # Apply theme if available?)
     try:
@@ -771,7 +835,7 @@ def main():
         style.theme_use('clam')
     except: pass
     
-    app = ConfigEditor(root)
+    app = ConfigEditor(root, auto_screenshot_mode=screenshot_mode)
     root.mainloop()
 
 if __name__ == "__main__":

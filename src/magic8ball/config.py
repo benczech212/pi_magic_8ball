@@ -369,9 +369,9 @@ def save_config(config: AppConfig, path: Optional[Path] = None):
             "debug": config.ui.debug,
         },
         "theme": {
-            "background": _format_color(config.theme.background),
-            "text": _format_color(config.theme.text),
-            "accent": _format_color(config.theme.accent),
+            "background": fmt_col(config.theme.background),
+            "text": fmt_col(config.theme.text),
+            "accent": fmt_col(config.theme.accent),
             "logo_path": str(config.theme.logo_path) if config.theme.logo_path else None,
             "logo_width": config.theme.logo_width,
             "font_path": str(config.theme.font_path) if config.theme.font_path else None,

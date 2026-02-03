@@ -1,3 +1,3 @@
-timestamp_utc,count,outcome
-2026-01-31T19:09:48+00:00,1,Use Radical Self Reliance
-2026-01-31T19:13:19+00:00,1,Try again after you’ve eaten something real.
+timestamp_utc,count,outcome,prompt
+2026-02-03T17:16:14+00:00,1,Yes. The playa respects commitment.,ASK THE VOID
+2026-02-03T17:19:37+00:00,1,"Consent says: ask clearly, then try again.",ASK THE VOID

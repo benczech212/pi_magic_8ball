@@ -2,3 +2,4 @@ pygame
 PyYAML
 gpiozero
 lgpio
+pyautogui

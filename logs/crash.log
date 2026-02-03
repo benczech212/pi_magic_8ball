@@ -1,0 +1,176 @@
+2026-02-03 12:10:30,163 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 54, in <module>
+    run_app(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/ui.py", line 381, in run_app
+    button = ArcadeButton(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/gpio_button.py", line 34, in __init__
+    self._hw_button = Button(gpio_pin, pull_up=pull_up, bounce_time=debounce_seconds)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/input_devices.py", line 412, in __init__
+    super().__init__(
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/mixins.py", line 417, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/input_devices.py", line 162, in __init__
+    super().__init__(
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/mixins.py", line 243, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/input_devices.py", line 79, in __init__
+    super().__init__(pin, pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 544, in __init__
+    super().__init__(pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 245, in __init__
+    Device.ensure_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 270, in ensure_pin_factory
+    Device.pin_factory = Device._default_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
+    raise BadPinFactory('Unable to load any default pin factory!')
+gpiozero.exc.BadPinFactory: Unable to load any default pin factory!
+2026-02-03 12:15:19,120 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 47, in <module>
+    editor.main(screenshot_mode=args.screenshot)
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/editor.py", line 836, in main
+    app = ConfigEditor(root, auto_screenshot_mode=screenshot_mode)
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/editor.py", line 117, in __init__
+    self._update_hardware_loop()
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/editor.py", line 210, in _update_hardware_loop
+    self.lamp.update(now)
+AttributeError: 'NoneType' object has no attribute 'update'
+2026-02-03 12:15:32,158 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 47, in <module>
+    editor.main(screenshot_mode=args.screenshot)
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/editor.py", line 836, in main
+    app = ConfigEditor(root, auto_screenshot_mode=screenshot_mode)
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/editor.py", line 117, in __init__
+    self._update_hardware_loop()
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/editor.py", line 210, in _update_hardware_loop
+    self.lamp.update(now)
+AttributeError: 'NoneType' object has no attribute 'update'
+2026-02-03 12:15:42,896 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 54, in <module>
+    run_app(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/ui.py", line 428, in run_app
+    lamp = ButtonLamp(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/lamp.py", line 42, in __init__
+    self._led = PWMLED(self.cfg.pin, active_high=self.cfg.active_high, frequency=self.cfg.pwm_hz)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 392, in __init__
+    super().__init__(pin, active_high=active_high, initial_value=None,
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 74, in __init__
+    super().__init__(pin, pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/mixins.py", line 75, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 544, in __init__
+    super().__init__(pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 245, in __init__
+    Device.ensure_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 270, in ensure_pin_factory
+    Device.pin_factory = Device._default_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
+    raise BadPinFactory('Unable to load any default pin factory!')
+gpiozero.exc.BadPinFactory: Unable to load any default pin factory!
+2026-02-03 12:16:49,188 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 54, in <module>
+    run_app(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/ui.py", line 428, in run_app
+    lamp = ButtonLamp(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/lamp.py", line 42, in __init__
+    self._led = PWMLED(self.cfg.pin, active_high=self.cfg.active_high, frequency=self.cfg.pwm_hz)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 392, in __init__
+    super().__init__(pin, active_high=active_high, initial_value=None,
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 74, in __init__
+    super().__init__(pin, pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/mixins.py", line 75, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 544, in __init__
+    super().__init__(pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 245, in __init__
+    Device.ensure_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 270, in ensure_pin_factory
+    Device.pin_factory = Device._default_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
+    raise BadPinFactory('Unable to load any default pin factory!')
+gpiozero.exc.BadPinFactory: Unable to load any default pin factory!
+2026-02-03 12:17:18,435 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 54, in <module>
+    run_app(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/ui.py", line 428, in run_app
+    lamp = ButtonLamp(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/lamp.py", line 42, in __init__
+    self._led = PWMLED(self.cfg.pin, active_high=self.cfg.active_high, frequency=self.cfg.pwm_hz)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 392, in __init__
+    super().__init__(pin, active_high=active_high, initial_value=None,
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 74, in __init__
+    super().__init__(pin, pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/mixins.py", line 75, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 544, in __init__
+    super().__init__(pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 245, in __init__
+    Device.ensure_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 270, in ensure_pin_factory
+    Device.pin_factory = Device._default_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
+    raise BadPinFactory('Unable to load any default pin factory!')
+gpiozero.exc.BadPinFactory: Unable to load any default pin factory!
+2026-02-03 12:17:28,135 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 54, in <module>
+    run_app(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/ui.py", line 428, in run_app
+    lamp = ButtonLamp(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/lamp.py", line 42, in __init__
+    self._led = PWMLED(self.cfg.pin, active_high=self.cfg.active_high, frequency=self.cfg.pwm_hz)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 392, in __init__
+    super().__init__(pin, active_high=active_high, initial_value=None,
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 74, in __init__
+    super().__init__(pin, pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/mixins.py", line 75, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 544, in __init__
+    super().__init__(pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 245, in __init__
+    Device.ensure_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 270, in ensure_pin_factory
+    Device.pin_factory = Device._default_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
+    raise BadPinFactory('Unable to load any default pin factory!')
+gpiozero.exc.BadPinFactory: Unable to load any default pin factory!
+2026-02-03 12:18:38,458 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 54, in <module>
+    run_app(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/ui.py", line 428, in run_app
+    lamp = ButtonLamp(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/lamp.py", line 42, in __init__
+    self._led = PWMLED(self.cfg.pin, active_high=self.cfg.active_high, frequency=self.cfg.pwm_hz)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 392, in __init__
+    super().__init__(pin, active_high=active_high, initial_value=None,
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 74, in __init__
+    super().__init__(pin, pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/mixins.py", line 75, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 544, in __init__
+    super().__init__(pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 245, in __init__
+    Device.ensure_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 270, in ensure_pin_factory
+    Device.pin_factory = Device._default_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
+    raise BadPinFactory('Unable to load any default pin factory!')
+gpiozero.exc.BadPinFactory: Unable to load any default pin factory!
