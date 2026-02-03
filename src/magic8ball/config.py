@@ -27,6 +27,7 @@ class ThemeConfig:
     logo_path: Optional[str] = None
     logo_width: Optional[int] = None
     font_path: Optional[str] = None
+    flip_logo: bool = False
 
 
 @dataclass(frozen=True)
@@ -259,8 +260,9 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         text=_parse_color(_deep_get(data, "theme.text", None), (240, 240, 240)),
         accent=_parse_color(_deep_get(data, "theme.accent", None), (200, 77, 255)),
         logo_path=_deep_get(data, "theme.logo_path", None),
-        logo_width=_deep_get(data, "theme.logo_width", None),
-        font_path=_deep_get(data, "theme.font_path", None),
+        logo_width=_deep_get(data, "theme.logo_width", 60),
+        font_path=_deep_get(data, "theme.font_path", ""),
+        flip_logo=bool(_deep_get(data, "theme.flip_logo", False)),
     )
 
     gpio = GPIOConfig(
@@ -286,7 +288,7 @@ def load_config(config_path: Path | None = None) -> AppConfig:
         fades_enabled=bool(_deep_get(data, "behavior.fades_enabled", True)),
         subtitle_cycle_seconds=_deep_get(data, "behavior.subtitle_cycle_seconds", 10.0),
         subtitle_fade_seconds=_deep_get(data, "behavior.subtitle_fade_seconds", 1.0),
-        title_cycle_seconds=_deep_get(data, "behavior.title_cycle_seconds", 10.0),
+        title_cycle_seconds=_deep_get(data, "behavior.title_cycle_seconds", 60.0),
         title_fade_seconds=_deep_get(data, "behavior.title_fade_seconds", 1.0),
         spin_speed=_deep_get(data, "behavior.spin_speed", 2.2),
     )
@@ -367,12 +369,13 @@ def save_config(config: AppConfig, path: Optional[Path] = None):
             "debug": config.ui.debug,
         },
         "theme": {
-            "background": fmt_col(config.theme.background),
-            "text": fmt_col(config.theme.text),
-            "accent": fmt_col(config.theme.accent),
-            "logo_path": config.theme.logo_path,
+            "background": _format_color(config.theme.background),
+            "text": _format_color(config.theme.text),
+            "accent": _format_color(config.theme.accent),
+            "logo_path": str(config.theme.logo_path) if config.theme.logo_path else None,
             "logo_width": config.theme.logo_width,
-            "font_path": config.theme.font_path,
+            "font_path": str(config.theme.font_path) if config.theme.font_path else None,
+            "flip_logo": config.theme.flip_logo,
         },
         "gpio": {
             "enabled": config.gpio.enabled,

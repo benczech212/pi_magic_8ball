@@ -12,6 +12,7 @@ theme:
   logo_path: src/assets/LUNARCRATS-LOGO.png
   logo_width: 60
   font_path: src/assets/Sofachrome Rg.otf
+  flip_logo: true
 gpio:
   enabled: true
   button_pin: 17
@@ -23,7 +24,7 @@ gpio:
   lamp_idle_speed: 1.5
 behavior:
   fades_enabled: true
-  title_cycle_seconds: 10.0
+  title_cycle_seconds: 60.0
   title_fade_seconds: 1.0
   animation_seconds: 5.0
   idle_return_seconds: 20
@@ -55,14 +56,15 @@ text:
   waiting_screen:
     title: MAGIC {{name}}
     subtitles:
-    - Press button for answers. No promises for good stuff.
+    - Ask a question, Press button for answers.
+    - Speak your query, then press button
     - Press button. No refunds.
     - Press button. Only with consent.
     - Press button to consult the vibes.
-    - Press button for cosmic insights.
+    - Ask universe, then press button for cosmic insights.
     - Press button. Results may vary.
     - Press button. Batteries ARE included.
-    - Press button. Don’t moop.
+    - Speak your question, then press button. Don’t moop.
     - Press button. Radical self-reliance engaged.
     - Press button. The playa provides (sometimes).
   thinking_screen:
@@ -295,3 +297,281 @@ outcomes:
 - text: Meow!
   weight: 10
   type: 'Yes'
+- text: "Yes. Sunscreen first, hero later."
+  weight: 14
+  type: 'Yes'
+
+- text: "Green light. Don’t overthink it."
+  weight: 13
+  type: 'Yes'
+
+- text: "Absolutely yes. Drink water and proceed."
+  weight: 13
+  type: 'Yes'
+
+- text: "Yes — but secure it like the wind owes you money."
+  weight: 12
+  type: 'Yes'
+
+- text: "Full send. Hydrate between bad decisions."
+  weight: 12
+  type: 'Yes'
+
+- text: "Yes. Future you already packed for this."
+  weight: 11
+  type: 'Yes'
+
+- text: "Do it. The dust has spoken."
+  weight: 11
+  type: 'Yes'
+
+- text: "Yes, but pace yourself, sparkle wizard."
+  weight: 10
+  type: 'Yes'
+
+- text: "Approved. Bring extra zip ties."
+  weight: 10
+  type: 'Yes'
+
+- text: "Yes. Label it, then unleash chaos."
+  weight: 10
+  type: 'Yes'
+
+- text: "Nope. That’s a sunrise regret."
+  weight: 14
+  type: 'No'
+
+- text: "Hard no. That’s how bikes disappear."
+  weight: 13
+  type: 'No'
+
+- text: "No. The wind will win."
+  weight: 13
+  type: 'No'
+
+- text: "Absolutely not. Eat food first."
+  weight: 12
+  type: 'No'
+
+- text: "No. That’s a glitter-covered mistake."
+  weight: 12
+  type: 'No'
+
+- text: "Negative. Your shade structure says no."
+  weight: 11
+  type: 'No'
+
+- text: "Nope. You’re one nap away from sense."
+  weight: 11
+  type: 'No'
+
+- text: "Do not. The porto line is already judging you."
+  weight: 10
+  type: 'No'
+
+- text: "No. That’s pre-MOOP behavior."
+  weight: 10
+  type: 'No'
+
+- text: "Denied. Try again after electrolytes."
+  weight: 10
+  type: 'No'
+
+- text: "Yes. But only the responsible kind of yes."
+  weight: 9
+  type: 'Yes'
+
+- text: "Yes — if you can carry it and your dignity."
+  weight: 9
+  type: 'Yes'
+
+- text: "Yes. The playa loves bold logistics."
+  weight: 8
+  type: 'Yes'
+
+- text: "No. That’s a camp meeting waiting to happen."
+  weight: 9
+  type: 'No'
+
+- text: "Nope. That’s how you lose a headlamp."
+  weight: 8
+  type: 'No'
+
+- text: "Yes. The art cars would approve."
+  weight: 8
+  type: 'Yes'
+
+- text: "No. That’s not radical, that’s paperwork."
+  weight: 8
+  type: 'No'
+
+- text: "Yes. You brought backups for a reason."
+  weight: 7
+  type: 'Yes'
+
+- text: "No. That idea needs shade and a snack."
+  weight: 7
+  type: 'No'
+
+- text: "Yes. This is exactly the right level of weird."
+  weight: 6
+  type: 'Yes'
+
+- text: "No. Your future self vetoed this."
+  weight: 6
+  type: 'No'
+
+- text: "Yes. Chaos, but organized chaos."
+  weight: 6
+  type: 'Yes'
+
+- text: "No. That’s a ‘where did my stuff go’ origin story."
+  weight: 6
+  type: 'No'
+- text: "Yes. This is why you came."
+  weight: 14
+  type: 'Yes'
+
+- text: "Clear yes. Execute calmly."
+  weight: 13
+  type: 'Yes'
+
+- text: "Yes. You already solved this in your head."
+  weight: 13
+  type: 'Yes'
+
+- text: "Yes — confidently, not loudly."
+  weight: 12
+  type: 'Yes'
+
+- text: "Yes. The playa respects commitment."
+  weight: 12
+  type: 'Yes'
+
+- text: "Yes. You packed the right tools."
+  weight: 11
+  type: 'Yes'
+
+- text: "Approved. This will work better than expected."
+  weight: 11
+  type: 'Yes'
+
+- text: "Yes. Move with purpose."
+  weight: 10
+  type: 'Yes'
+
+- text: "Yes. You’re within tolerance."
+  weight: 10
+  type: 'Yes'
+
+- text: "Yes. This is a good risk."
+  weight: 10
+  type: 'Yes'
+
+- text: "No. This is how plans unravel."
+  weight: 14
+  type: 'No'
+
+- text: "Hard no. Abort cleanly."
+  weight: 13
+  type: 'No'
+
+- text: "No. Conditions are wrong."
+  weight: 13
+  type: 'No'
+
+- text: "No. Re-evaluate after rest."
+  weight: 12
+  type: 'No'
+
+- text: "Absolutely not. You’re missing one key thing."
+  weight: 12
+  type: 'No'
+
+- text: "No. The math doesn’t close."
+  weight: 11
+  type: 'No'
+
+- text: "No. You’re pushing past smart."
+  weight: 11
+  type: 'No'
+
+- text: "No. Save this idea for daylight."
+  weight: 10
+  type: 'No'
+
+- text: "Denied. This breaks camp harmony."
+  weight: 10
+  type: 'No'
+
+- text: "No. That’s a recovery problem later."
+  weight: 10
+  type: 'No'
+
+- text: "Yes. Minimal drama path."
+  weight: 9
+  type: 'Yes'
+
+- text: "Yes — but document it."
+  weight: 9
+  type: 'Yes'
+
+- text: "Yes. This aligns with the plan you forgot you made."
+  weight: 9
+  type: 'Yes'
+
+- text: "No. That’s not the hill to die on."
+  weight: 9
+  type: 'No'
+
+- text: "No. Too many downstream consequences."
+  weight: 9
+  type: 'No'
+
+- text: "Yes. Elegant and sufficient."
+  weight: 8
+  type: 'Yes'
+
+- text: "No. This increases entropy unnecessarily."
+  weight: 8
+  type: 'No'
+
+- text: "Yes. The system can handle it."
+  weight: 8
+  type: 'Yes'
+
+- text: "No. You’re ignoring friction."
+  weight: 8
+  type: 'No'
+
+- text: "Yes. Proceed without announcing it."
+  weight: 7
+  type: 'Yes'
+
+- text: "No. This is how gear gets lost."
+  weight: 7
+  type: 'No'
+
+- text: "Yes. This is well within spec."
+  weight: 7
+  type: 'Yes'
+
+- text: "No. This creates more cleanup than joy."
+  weight: 7
+  type: 'No'
+
+- text: "Yes. Controlled chaos approved."
+  weight: 6
+  type: 'Yes'
+
+- text: "No. This violates common sense."
+  weight: 6
+  type: 'No'
+
+- text: "Yes. Small action, big payoff."
+  weight: 6
+  type: 'Yes'
+
+- text: "No. This isn’t the moment."
+  weight: 6
+  type: 'No'

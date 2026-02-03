@@ -67,6 +67,8 @@ class AppModel:
     
     # NEW: Spin Physics
     spin_direction: int = 1 # 1 or -1
+    spin_angle_offset: float = 0.0
+    idle_angle_offset: float = 0.0
 
 
 def _lerp(a: int, b: int, t: float) -> int:
@@ -309,38 +311,52 @@ class FadeOverlay:
 def _compute_square_pose(now: float, model: AppModel) -> Tuple[float, float]:
     """
     Returns (angle_radians, motion_0_to_1) for the square.
-    - During thinking: angle = now*speed, motion = 1
-    - After thinking: settle angle to nearest rest (0 or 2π) with minimal rotation,
-      while motion damps to 0 over square_settle_seconds.
+    Handles Idle, Thinking (Spin), and Result (Decay).
     """
-    angle_speed = 2.2
-    two_pi = math.tau  # 2π
-
-    # Full motion during thinking/fadein thinking
-    if model.state in (AppState.THINKING, AppState.FADEIN_THINKING):
-        return (now * angle_speed, 1.0)
-
-    settle_s = max(0.0, float(CONFIG.behavior.square_settle_seconds))
-    if settle_s <= 0.001 or model.settle_started_at <= 0.0:
-        return (0.0, 0.0)
-
-    elapsed = now - model.settle_started_at
-    if elapsed <= 0:
-        # immediately after capture
-        return (model.settle_angle_start, model.settle_motion_start)
-
-    if elapsed >= settle_s:
-        return (0.0, 0.0)
-
-    u = elapsed / settle_s
-    u_ease = _ease_out_cubic(u)  # 0->1
-
-    # motion damps to 0
-    motion = (1.0 - u_ease) * model.settle_motion_start
-
-    # angle interpolates to nearest rest target
-    angle = model.settle_angle_start + (model.settle_angle_target - model.settle_angle_start) * u_ease
-    return (angle, motion)
+    # Calculate spin speed
+    base_speed = float(getattr(CONFIG.behavior, "spin_speed", 1.0)) * 0.5
+    
+    # Idle spin
+    if model.state in (AppState.PROMPT, AppState.FADEIN_PROMPT):
+        # Idle uses base_speed + offset
+        return (now * base_speed + model.idle_angle_offset), 1.0
+          
+    elif model.state in (AppState.THINKING, AppState.FADEIN_THINKING):
+         # fast spin with direction
+         spin_speed = base_speed * 8.0
+         raw_angle = (now * spin_speed * model.spin_direction)
+         return (raw_angle + model.spin_angle_offset), 1.0
+         
+    elif model.state in (AppState.RESULT, AppState.FADEOUT):
+         # Decay Logic ("Slow to a stop")
+         # Formula: angle(t) = angle_start + (v0 / decay) * (1 - exp(-decay * t))
+         
+         decay_rate = 2.0 # Higher = stops faster
+         settle_s = max(0.001, float(CONFIG.behavior.square_settle_seconds))
+         
+         elapsed = now - model.settle_started_at
+         
+         if elapsed <= 0:
+             return (model.settle_angle_start, 1.0)
+             
+         # Velocity decay
+         v0 = model.settle_motion_start
+         
+         # Angle
+         factor = (1.0 - math.exp(-decay_rate * elapsed))
+         angle_offset = (v0 / decay_rate) * factor
+         angle = model.settle_angle_start + angle_offset
+         
+         # Motion (for pulsing icon)
+         current_v = v0 * math.exp(-decay_rate * elapsed)
+         motion = abs(current_v) / (abs(v0) + 0.0001)
+         
+         # Clamp motion
+         if motion < 0.001: motion = 0.0
+         
+         return (angle, motion)
+         
+    return 0.0, 0.0
 
 
 def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug: Optional[bool] = None, screenshot_mode: Optional[str] = None):
@@ -390,6 +406,9 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
              return None
 
     icon_surf = _load_asset("Logo Icon.png", target_width=CONFIG.ui.window_height // 2) # approx size
+    if icon_surf and getattr(CONFIG.theme, "flip_logo", False):
+         icon_surf = pygame.transform.flip(icon_surf, True, False)
+
     logo_text_surf = _load_asset("Logo Text.png", target_width=int(CONFIG.ui.window_width * 0.8))
     logo_full_surf = _load_asset("LUNARCRATS-LOGO.png", target_width=int(CONFIG.ui.window_width * 0.6))
 
@@ -435,8 +454,17 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
         return False
 
     def start_prompt_fadein():
+        # Capture current angle for continuity
+        prev_angle, _ = _compute_square_pose(time.monotonic(), model)
+        
         model.state = AppState.FADEIN_PROMPT
         model.fadein_started_at = time.monotonic()
+        
+        # Calculate offset: prev_angle = now * base_speed + offset
+        base_speed = float(getattr(CONFIG.behavior, "spin_speed", 1.0)) * 0.5
+        current_idle_term = model.fadein_started_at * base_speed
+        model.idle_angle_offset = prev_angle - current_idle_term
+
         model.waiting_subtitle = _render_template(_pick_subtitle(CONFIG.text.waiting_screen.subtitles))
         model.subtitle_last_cycle_at = time.monotonic()
         model.is_fading_subtitle = False
@@ -452,8 +480,28 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
         model.fadein_started_at = time.monotonic()
         model.thinking_started_at = time.monotonic()
         
+        # Capture current angle to maintain continuity
+        # Current angle logic (from RESULT/Decay or IDLE)
+        # We need the *actual* displayed angle at this moment.
+        # We can re-use _compute_square_pose but it returns (angle, motion).
+        prev_angle, _ = _compute_square_pose(time.monotonic(), model)
+        
         # New Question = Random Spin Direction
         model.spin_direction = random.choice([1, -1])
+        
+        # We want the new thinking animation (now * speed * dir + offset)
+        # to equal prev_angle at t=now.
+        # offset = prev_angle - (now * speed * dir)
+        
+        # Calculate speed same as _compute_square_pose thinking block
+        base_speed = float(getattr(CONFIG.behavior, "spin_speed", 1.0)) * 0.5
+        spin_speed = base_speed * 8.0
+        
+        start_t = time.monotonic() # This is 'now' basically
+        
+        # Calculate offset
+        current_spin_term = start_t * spin_speed * model.spin_direction
+        model.spin_angle_offset = prev_angle - current_spin_term
         
         # Random Duration
         t_min = float(getattr(CONFIG.behavior, "thinking_min_seconds", 2.0))
@@ -486,7 +534,7 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
         # But _compute_square_pose uses (now * speed).
         # We need to capture the *effective* angle at 'now'.
         # Since 'now' increases monotonically, angle = now * speed * dir.
-        current_angle = (now * spin_speed * model.spin_direction)
+        current_angle = (now * spin_speed * model.spin_direction) + model.spin_angle_offset
         
         model.settle_started_at = now
         model.settle_angle_start = current_angle
@@ -771,58 +819,14 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
             # Calculate spin speed
             base_speed = float(getattr(CONFIG.behavior, "spin_speed", 1.0)) * 0.5 # Slower
             
-            # --- HELPER: Compute Angle ---
-            def _compute_square_pose(now_t, m):
-                 # Idle spin
-                 if m.state in (AppState.PROMPT, AppState.FADEIN_PROMPT):
-                      # Slow spin, constant direction? Or idle direction?
-                      # Let's use spin_direction for idle too? 
-                      # Or just constant +1 for idle? User said "spin a random direction... on each run" (Thinking).
-                      # Idle can stay constant slow positive.
-                      return (now_t * base_speed), 1.0
-                      
-                 elif m.state == AppState.THINKING:
-                      # fast spin with direction
-                      spin_speed = base_speed * 8.0
-                      return (now_t * spin_speed * m.spin_direction), 1.0
-                      
-                 elif m.state == AppState.RESULT:
-                      # Decay Logic ("Slow to a stop")
-                      # Formula: angle(t) = angle_start + (v0 / decay) * (1 - exp(-decay * t))
-                      
-                      decay_rate = 2.0 # Higher = stops faster
-                      settle_s = max(0.001, float(CONFIG.behavior.square_settle_seconds))
-                      
-                      elapsed = now_t - m.settle_started_at
-                      
-                      if elapsed <= 0:
-                          return (m.settle_angle_start, 1.0)
-                          
-                      # Velocity decay
-                      # v(t) = v0 * exp(-decay * t)
-                      # We want motion (0..1) to represent normalized speed?
-                      # Or just use result for angle.
-                      
-                      v0 = m.settle_motion_start # We stored v0 here
-                      
-                      # Angle
-                      # factor = (1 - exp(-decay * elapsed))
-                      factor = (1.0 - math.exp(-decay_rate * elapsed))
-                      angle_offset = (v0 / decay_rate) * factor
-                      angle = m.settle_angle_start + angle_offset
-                      
-                      # Motion (for pulsing icon)
-                      # v_current = v0 * exp(-decay * elapsed)
-                      # normalize motion: v_current / v0_abs
-                      current_v = v0 * math.exp(-decay_rate * elapsed)
-                      motion = abs(current_v) / (abs(v0) + 0.0001)
-                      
-                      # Clamp motion
-                      if motion < 0.001: motion = 0.0
-                      
-                      return (angle, motion)
-                      
-                 return 0.0, 0.0
+             # --- HELPER: Compute Angle ---
+             # We use the global _compute_square_pose now for consistency
+             
+             # Calculate spin speed (just for reference if needed, but logic is in compute func)
+             # ...
+             
+             # Ensure angle/motion uses correct function
+             # (This block previously defined a local _compute_square_pose, now removed)
                  
 
             
@@ -870,6 +874,16 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
             # Helper to draw Full Logo
             def draw_full_logo(opacity=1.0):
                  if opacity <= 0.01: return
+                 
+                 # Draw Title (User Request)
+                 # Static "Lunarcrats <name>"
+                 title_y = int(90 * scale)
+                 t_str = f"Lunarcrats {CONFIG.name}"
+                 col = text
+                 if opacity < 0.99:
+                      col = _blend(col, bg, 1.0 - opacity)
+                 _draw_centered_text_autofit(screen, t_str, title_y, color=col, max_font_size=title_font_sz)
+
                  if logo_full_surf:
                      r = logo_full_surf.get_rect(center=(s_w//2, s_h//2))
                      if opacity < 0.99:

@@ -58,6 +58,7 @@ class ConfigEditor:
         self.var_logo_path = tk.StringVar(value=self.config.theme.logo_path or "")
         self.var_logo_width = tk.IntVar(value=self.config.theme.logo_width or 0)
         self.var_font_path = tk.StringVar(value=self.config.theme.font_path or "")
+        self.var_flip_logo = tk.BooleanVar(value=getattr(self.config.theme, "flip_logo", False))
         
         self.var_thinking_min = tk.DoubleVar(value=getattr(self.config.behavior, "thinking_min_seconds", 2.0))
         self.var_thinking_max = tk.DoubleVar(value=getattr(self.config.behavior, "thinking_max_seconds", 5.0))
@@ -284,12 +285,15 @@ class ConfigEditor:
         make_row(5, "Logo Width (%):", self.var_logo_width, is_color=False)
         make_row(6, "Font Path:", self.var_font_path, is_color=False,
                  browse_cmd=lambda: browse_file(self.var_font_path, "Select Font", [("Fonts", "*.ttf *.otf")]))
+        
+        ttk.Label(inner, text="Flip Icon:").grid(row=7, column=0, sticky="w", pady=5)
+        ttk.Checkbutton(inner, variable=self.var_flip_logo).grid(row=7, column=1, sticky="w", pady=5)
 
         # Logo Preview
         if HAS_PIL:
-            ttk.Label(inner, text="Logo Preview:").grid(row=7, column=0, sticky="nw", pady=10)
+            ttk.Label(inner, text="Logo Preview:").grid(row=8, column=0, sticky="nw", pady=10)
             self.lbl_logo_preview = ttk.Label(inner, text="(No logo)")
-            self.lbl_logo_preview.grid(row=7, column=1, columnspan=2, sticky="w", pady=10)
+            self.lbl_logo_preview.grid(row=8, column=1, columnspan=2, sticky="w", pady=10)
             
             def update_logo_preview(*args):
                 path_str = self.var_logo_path.get()
@@ -678,8 +682,9 @@ class ConfigEditor:
         theme = ThemeConfig(
             background=bg, text=txt, accent=acc,
             logo_path=self.var_logo_path.get() or None,
-            logo_width=self.var_logo_width.get() or None,
-            font_path=self.var_font_path.get() or None
+            logo_width=self.var_logo_width.get(),
+            font_path=self.var_font_path.get(),
+            flip_logo=self.var_flip_logo.get(),
         )
         
         # 3. Text
