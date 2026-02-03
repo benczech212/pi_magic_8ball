@@ -101,6 +101,15 @@ def _draw_centered_text(screen, font, text, y, color):
     surf = font.render(text, True, color)
     rect = surf.get_rect(center=(screen.get_width() // 2, y))
     screen.blit(surf, rect)
+def _get_font(size: int, bold: bool = False) -> pygame.font.Font:
+    if CONFIG.theme.font_path and Path(CONFIG.theme.font_path).exists():
+       try:
+           return pygame.font.Font(str(CONFIG.theme.font_path), size)
+       except Exception:
+           pass
+    return pygame.font.SysFont(None, size, bold=bold)
+
+
 def _draw_centered_text_autofit(
     screen: pygame.Surface,
     text: str,
@@ -123,18 +132,10 @@ def _draw_centered_text_autofit(
 
     size = max_font_size
     
-    def get_font(s):
-        if CONFIG.theme.font_path and Path(CONFIG.theme.font_path).exists():
-           try:
-               return pygame.font.Font(str(CONFIG.theme.font_path), s)
-           except Exception:
-               pass
-        return pygame.font.SysFont(None, s, bold=bold)
-
-    chosen_font = get_font(size)
+    chosen_font = _get_font(size, bold=bold)
 
     while size > min_font_size:
-        f = get_font(size)
+        f = _get_font(size, bold=bold)
         w, h = f.size(text)
         if w <= max_w:
             # Extra safety: ensure it doesn't bleed off screen edges
@@ -156,13 +157,14 @@ def _draw_centered_text_multiline(
     color: Tuple[int, int, int],
     max_width_ratio: float = 0.90,
     font_size: int = 44,
+    center_vertically: bool = False,
 ):
     """Simple multiline centered text"""
     if not text: return
     
     screen_w = screen.get_width()
     max_w = int(screen_w * max_width_ratio)
-    font = pygame.font.SysFont(None, font_size)
+    font = _get_font(font_size)
     
     lines = _wrap_lines(font, text, max_w)
     h = font.get_height()
@@ -170,9 +172,12 @@ def _draw_centered_text_multiline(
     
     # We want to center the block around y? Or start at y?
     # Usually start at y (baseline-ish) or center.
-    # Let's align top at y.
     
-    curr_y = y
+    start_y = y
+    if center_vertically:
+        start_y = y - (total_h // 2)
+    
+    curr_y = start_y
     for line in lines:
         surf = font.render(line, True, color)
         rect = surf.get_rect(center=(screen_w // 2, curr_y + h // 2))
@@ -1010,15 +1015,14 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                 
                 # FIXED OVERLAP: Removed duplicate draw
                 
-                _draw_centered_text_autofit(
+                _draw_centered_text_multiline(
                     screen,
                     subtitle,
                     s_h - int(140 * scale),
                     color=muted,
                     max_width_ratio=0.92,
-                    max_font_size=prompt_font_sz,   # matches your font_med vibe
-                    min_font_size=22,
-                    bold=False,
+                    font_size=prompt_font_sz,   # matches your font_med vibe
+                    center_vertically=True,
                 )
 
                 if model.state == AppState.FADEIN_THINKING:
