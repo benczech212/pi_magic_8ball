@@ -1,3 +1,5 @@
 timestamp_utc,count,outcome,prompt
 2026-02-03T17:16:14+00:00,1,Yes. The playa respects commitment.,ASK THE VOID
 2026-02-03T17:19:37+00:00,1,"Consent says: ask clearly, then try again.",ASK THE VOID
+2026-02-03T17:29:37+00:00,1,Yes. This is exactly the right level of weird.,ASK THE VOID
+2026-02-03T17:29:47+00:00,2,No. Too many downstream consequences.,ASK THE VOID

@@ -59,3 +59,5 @@ logs/crash.log
 logs/interactions.csv
 src/__pycache__/main.cpython-310.pyc
 src/__pycache__/main.cpython-311.pyc
+logs/crash.log
+logs/interactions.csv

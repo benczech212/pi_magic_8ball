@@ -174,3 +174,28 @@ Traceback (most recent call last):
   File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
     raise BadPinFactory('Unable to load any default pin factory!')
 gpiozero.exc.BadPinFactory: Unable to load any default pin factory!
+2026-02-03 12:28:30,281 ERROR: Uncaught exception:
+Traceback (most recent call last):
+  File "/home/benczech/dev/pi_magic_8ball/src/main.py", line 54, in <module>
+    run_app(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/ui.py", line 433, in run_app
+    lamp = ButtonLamp(
+  File "/home/benczech/dev/pi_magic_8ball/src/magic8ball/lamp.py", line 42, in __init__
+    self._led = PWMLED(self.cfg.pin, active_high=self.cfg.active_high, frequency=self.cfg.pwm_hz)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 392, in __init__
+    super().__init__(pin, active_high=active_high, initial_value=None,
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/output_devices.py", line 74, in __init__
+    super().__init__(pin, pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/mixins.py", line 75, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 544, in __init__
+    super().__init__(pin_factory=pin_factory)
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 245, in __init__
+    Device.ensure_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 270, in ensure_pin_factory
+    Device.pin_factory = Device._default_pin_factory()
+  File "/home/benczech/.local/lib/python3.10/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
+    raise BadPinFactory('Unable to load any default pin factory!')
+gpiozero.exc.BadPinFactory: Unable to load any default pin factory!

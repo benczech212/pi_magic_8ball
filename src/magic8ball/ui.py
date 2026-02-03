@@ -101,7 +101,9 @@ def _draw_centered_text(screen, font, text, y, color):
     surf = font.render(text, True, color)
     rect = surf.get_rect(center=(screen.get_width() // 2, y))
     screen.blit(surf, rect)
-def _get_font(size: int, bold: bool = False) -> pygame.font.Font:
+def _get_font(size: int, bold: bool = False, font_name: Optional[str] = None) -> pygame.font.Font:
+    if font_name:
+        return pygame.font.SysFont(font_name, size, bold=bold)
     if CONFIG.theme.font_path and Path(CONFIG.theme.font_path).exists():
        try:
            return pygame.font.Font(str(CONFIG.theme.font_path), size)
@@ -158,13 +160,14 @@ def _draw_centered_text_multiline(
     max_width_ratio: float = 0.90,
     font_size: int = 44,
     center_vertically: bool = False,
+    font_name: Optional[str] = None,
 ):
     """Simple multiline centered text"""
     if not text: return
     
     screen_w = screen.get_width()
     max_w = int(screen_w * max_width_ratio)
-    font = _get_font(font_size)
+    font = _get_font(font_size, font_name=font_name)
     
     lines = _wrap_lines(font, text, max_w)
     h = font.get_height()
@@ -990,7 +993,9 @@ def run_app(disable_gpio: bool = False, fullscreen: Optional[bool] = None, debug
                             s_h - int(140 * scale),
                             color=final_color,
                             max_width_ratio=0.85,
-                            font_size=title_font_sz, # Use larger font but wrap
+                            font_size=prompt_font_sz,
+                            center_vertically=True,
+                            font_name="arial",
                         )
 
 
